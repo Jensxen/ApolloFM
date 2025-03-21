@@ -1,0 +1,6 @@
+@ApolloAPI_HostAddress = http://localhost:5062
+
+GET {{ApolloAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

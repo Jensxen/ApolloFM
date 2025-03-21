@@ -9,6 +9,7 @@ namespace FM.Domain.Entities
     public class Post
     {
         public int Id { get; set; } // Primary key
+        public string Title { get; set; }
         public string Content { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string SpotifyPlaylistId { get; set; } // Spotify playlist ID

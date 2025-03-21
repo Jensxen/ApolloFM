@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApolloFM", "ApolloFM\ApolloFM.csproj", "{D79DDEF9-016C-49C6-B565-7B217DA25F96}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FM.Test", "FM.Test\FM.Test.csproj", "{2F94FE32-00F9-4250-B048-2D4EAE109544}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FM.Presentation", "FM.Presentation\FM.Presentation.csproj", "{AFF91178-BBE6-4A02-83DF-59B0ED033469}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApolloAPI", "ApolloAPI\ApolloAPI.csproj", "{A6229141-4EE6-4333-A7FA-77E745A07418}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{AFF91178-BBE6-4A02-83DF-59B0ED033469}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AFF91178-BBE6-4A02-83DF-59B0ED033469}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFF91178-BBE6-4A02-83DF-59B0ED033469}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6229141-4EE6-4333-A7FA-77E745A07418}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6229141-4EE6-4333-A7FA-77E745A07418}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6229141-4EE6-4333-A7FA-77E745A07418}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6229141-4EE6-4333-A7FA-77E745A07418}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

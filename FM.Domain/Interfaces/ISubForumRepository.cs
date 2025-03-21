@@ -9,10 +9,10 @@ namespace FM.Domain.Interfaces
 {
     public interface ISubForumRepository
     {
-        Task<IEnumerable<SubForum>> GetAllSubForums();
-        Task<SubForum> GetSubForumById(int id);
-        Task AddSubForum(SubForum subForum);
-        Task UpdateSubForum(SubForum subForum);
-        Task DeleteSubForum(int id);
+        Task<IEnumerable<SubForum>> GetAllSubForumsAsync();
+        Task<SubForum> GetSubForumByIdAsync(int id);
+        Task AddSubForumAsync(SubForum subForum);
+        Task UpdateSubForumAsync(SubForum subForum);
+        Task DeleteSubForumAsync(int id);
     }
 }
