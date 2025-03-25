@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace FM.Infrastucture.DbContext
+namespace FM.Infrastructure.Database
 {
     public class ApolloContextFactory : IDesignTimeDbContextFactory<ApolloContext>
     {

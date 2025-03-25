@@ -10,7 +10,7 @@ namespace FM.Domain.Entities
     {
         public int Id { get; set; } // Primary key
         public string Content { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         // Foreign key and navigation property for Post
         public int PostId { get; set; }
@@ -18,5 +18,7 @@ namespace FM.Domain.Entities
 
         // Foreign key and navigation property for User
         public string UserId { get; set; }
+        public User User { get; set; }
     }
+
 }

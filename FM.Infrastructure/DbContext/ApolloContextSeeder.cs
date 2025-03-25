@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FM.Domain.Entities;
 
-namespace FM.Infrastucture.DbContext
+namespace FM.Infrastructure.Database
 {
     // Infrastructure/Persistence/ForumContextSeeder.cs
     public static class ForumContextSeeder

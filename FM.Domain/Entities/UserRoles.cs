@@ -9,7 +9,8 @@ namespace FM.Domain.Entities
     public class UserRole
     {
         public int Id { get; set; } // Primary key
-        public string Name { get; set; } // Role name (e.g., "Moderator", "Staff", "HeadAdmin")
-        public ICollection<User> Users { get; set; } = new List<User>(); // Navigation property
+        public string Name { get; set; } // Role name (fks, "Moderator", "Staff", "HeadAdmin")
+        public ICollection<User> Users { get; set; } = new List<User>();
     }
+
 }

@@ -1,19 +1,19 @@
 ﻿using FM.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace FM.Infrastucture.DbContext
+namespace FM.Infrastructure.Database
 {
-    public class ApolloContext : Microsoft.EntityFrameworkCore.DbContext
+    public class ApolloContext : DbContext
     {
+        public ApolloContext(DbContextOptions<ApolloContext> options) : base(options)
+        {
+        }
+
         public DbSet<User> Users { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<SubForum> SubForums { get; set; }
-
-        public ApolloContext(DbContextOptions<ApolloContext> options) : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +28,18 @@ namespace FM.Infrastucture.DbContext
                 .HasOne(p => p.SubForum)
                 .WithMany(f => f.Posts)
                 .HasForeignKey(p => p.SubForumId);
+
+            // Configure Post-Comment relationship
+            modelBuilder.Entity<Comment>()
+                .HasOne(c => c.Post)
+                .WithMany(p => p.Comments)
+                .HasForeignKey(c => c.PostId);
+
+            // Configure User-Comment relationship
+            modelBuilder.Entity<Comment>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.Comments)
+                .HasForeignKey(c => c.UserId);
 
             base.OnModelCreating(modelBuilder);
         }

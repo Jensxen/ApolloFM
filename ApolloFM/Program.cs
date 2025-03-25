@@ -1,11 +1,11 @@
-using FM.Domain.Interfaces;
+using FM.Application.Interfaces;
 using FM.Infrastucture;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.EntityFrameworkCore;
 using ApolloFM;
 using FM.Infrastructure.Repositories;
-using FM.Infrastucture.DbContext;
+using FM.Infrastructure.Database;
 using FM.Infrastucture.Repositories;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -23,8 +23,7 @@ builder.Services.AddDbContextFactory<ApolloContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Register repositories and services
-builder.Services.AddScoped<IPostRepository, PostRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 
 // Build and run the application
 await builder.Build().RunAsync();

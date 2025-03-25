@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FM.Domain.Entities;
-using FM.Domain.Interfaces;
+using FM.Application.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 using FM.Application.DTOs.SubForumDTO;
 

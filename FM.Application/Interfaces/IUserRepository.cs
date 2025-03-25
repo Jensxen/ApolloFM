@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FM.Domain.Entities;
 
-namespace FM.Domain.Interfaces
+namespace FM.Application.Interfaces
 {
     public interface IUserRepository
     {

@@ -1,6 +1,6 @@
 ﻿using FM.Domain.Entities;
-using FM.Domain.Interfaces;
-using FM.Infrastucture.DbContext;
+using FM.Application.Interfaces;
+using FM.Infrastructure.Database;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;

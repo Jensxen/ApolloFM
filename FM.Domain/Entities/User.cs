@@ -14,7 +14,8 @@ namespace FM.Domain.Entities
 
         public int UserRoleId { get; set; }
         public UserRole UserRole { get; set; }
-
-        public ICollection<Post> Posts { get; set; } = new List<Post>(); // Navigation property
+        public ICollection<Post> Posts { get; set; } = new List<Post>();
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
+
 }
