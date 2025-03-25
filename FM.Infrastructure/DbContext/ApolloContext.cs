@@ -21,27 +21,32 @@ namespace FM.Infrastructure.Database
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserRole)
                 .WithMany(r => r.Users)
-                .HasForeignKey(u => u.UserRoleId);
+                .HasForeignKey(u => u.UserRoleId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure SubForum relationship
             modelBuilder.Entity<Post>()
                 .HasOne(p => p.SubForum)
                 .WithMany(f => f.Posts)
-                .HasForeignKey(p => p.SubForumId);
+                .HasForeignKey(p => p.SubForumId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure Post-Comment relationship
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
-                .HasForeignKey(c => c.PostId);
+                .HasForeignKey(c => c.PostId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure User-Comment relationship
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.User)
                 .WithMany(u => u.Comments)
-                .HasForeignKey(c => c.UserId);
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             base.OnModelCreating(modelBuilder);
         }
     }
 }
+

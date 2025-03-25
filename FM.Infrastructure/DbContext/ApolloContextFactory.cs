@@ -8,9 +8,12 @@ namespace FM.Infrastructure.Database
         public ApolloContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<ApolloContext>();
-            optionsBuilder.UseNpgsql("Host=localhost;Database=ApolloFM;Username=postgres;Password=admin");
+            optionsBuilder.UseSqlServer("Server=localhost;Database=ApolloDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True");
 
             return new ApolloContext(optionsBuilder.Options);
         }
     }
 }
+
+
+
