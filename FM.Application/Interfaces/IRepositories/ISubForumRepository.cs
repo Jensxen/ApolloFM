@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FM.Domain.Entities;
 
@@ -16,3 +13,4 @@ namespace FM.Application.Interfaces.IRepositories
         Task DeleteSubForumAsync(int id);
     }
 }
+

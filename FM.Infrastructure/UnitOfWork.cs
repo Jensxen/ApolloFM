@@ -9,35 +9,29 @@ namespace FM.Infrastructure;
 
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly ApolloContext _db;
-    private DbTransaction _transaction;
-    private bool _disposed;
-    private bool _isCommitted;
-    public UnitOfWork(ApolloContext db)
+    private readonly ApolloContext _context;
+    private IDbContextTransaction _transaction;
+
+    public UnitOfWork(ApolloContext context)
     {
-        _db = db;
-        _isCommitted = false;
+        _context = context;
     }
 
-    void IUnitOfWork.BeginTransaction(IsolationLevel isolationLevel = IsolationLevel.Serializable)
+    public void BeginTransaction(IsolationLevel isolationLevel = IsolationLevel.Serializable)
     {
-        if (_db.Database.CurrentTransaction == null)
-        {
-            _transaction = _db.Database.BeginTransaction(isolationLevel).GetDbTransaction();
-        }
+        _transaction = _context.Database.BeginTransaction(isolationLevel);
     }
 
-    void IUnitOfWork.Commit()
+    public void Commit()
     {
         try
         {
-            _db.SaveChanges();
+            _context.SaveChanges();
             _transaction?.Commit();
-            _isCommitted = true;
         }
         catch
         {
-            _transaction?.Rollback();
+            Rollback();
             throw;
         }
         finally
@@ -47,76 +41,50 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    void IUnitOfWork.Rollback()
+    public void Rollback()
     {
-        if (!_isCommitted && _transaction != null)
-        {
-            _transaction.Rollback();
-            _transaction.Dispose();
-            _transaction = null;
-        }
+        _transaction?.Rollback();
+        _transaction?.Dispose();
+        _transaction = null;
     }
 
-    public void Dispose()
+    public async Task BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Serializable)
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        _transaction = await _context.Database.BeginTransactionAsync(isolationLevel);
     }
 
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
-        {
-            if (disposing)
-            {
-                if (!_isCommitted)
-                {
-                    _transaction?.Rollback();
-                }
-                _transaction?.Dispose();
-                _db.Dispose();
-            }
-            _disposed = true;
-        }
-    }
-
-    async Task IUnitOfWork.BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Serializable)
-    {
-        if (_db.Database.CurrentTransaction == null)
-        {
-            IDbContextTransaction transaction = await _db.Database.BeginTransactionAsync(isolationLevel);
-            _transaction = transaction.GetDbTransaction();
-        }
-    }
-
-    async Task IUnitOfWork.CommitAsync()
+    public async Task CommitAsync()
     {
         try
         {
-            await _db.SaveChangesAsync();
-            await _transaction.CommitAsync();
-            _isCommitted = true;
+            await _context.SaveChangesAsync();
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+            }
         }
         catch
         {
-            await _transaction.RollbackAsync();
+            await RollbackAsync();
             throw;
         }
         finally
         {
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            if (_transaction != null)
+            {
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
     }
 
-    async Task IUnitOfWork.RollbackAsync()
+    public async Task RollbackAsync()
     {
-        if (!_isCommitted && _transaction != null)
+        if (_transaction != null)
         {
             await _transaction.RollbackAsync();
             await _transaction.DisposeAsync();
             _transaction = null;
         }
     }
-
 }

@@ -3,6 +3,8 @@ using FM.Application.Interfaces.IRepositories;
 using FM.Application.Interfaces;
 using FM.Application.Command.CommandDTO.SubForumCommandDTO;
 using FM.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace FM.Application.Command
 {
@@ -17,9 +19,9 @@ namespace FM.Application.Command
             _unitOfWork = unitOfWork;
         }
 
-        void ISubForumCommand.CreateSubForum(CreateSubForumCommandDTO command)
+        public async Task CreateSubForum(CreateSubForumCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var subForum = new SubForum
@@ -28,66 +30,60 @@ namespace FM.Application.Command
                     Description = command.Description,
                 };
 
-                _subForumRepository.AddSubForumAsync(subForum);
-                _unitOfWork.Commit();
+                await _subForumRepository.AddSubForumAsync(subForum);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
 
-        void ISubForumCommand.UpdateSubForum(UpdateSubForumCommandDTO command)
+        public async Task UpdateSubForum(UpdateSubForumCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var subForum = _subForumRepository.GetSubForumByIdAsync(command.Id).Result;
+                var subForum = await _subForumRepository.GetSubForumByIdAsync(command.Id);
                 if (subForum == null)
                 {
                     throw new Exception("SubForum not found");
-                }
-                if (!subForum.RowVersion.SequenceEqual(command.RowVersion))
-                {
-                    throw new Exception("SubForum has been modified by someone else. Please refresh and try again.");
                 }
 
                 subForum.Name = command.Name;
                 subForum.Description = command.Description;
 
-                _subForumRepository.UpdateSubForumAsync(subForum);
-                _unitOfWork.Commit();
+                await _subForumRepository.UpdateSubForumAsync(subForum);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
 
-        void ISubForumCommand.DeleteSubForum(DeleteSubForumCommandDTO command)
+        public async Task DeleteSubForum(DeleteSubForumCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var subForum = _subForumRepository.GetSubForumByIdAsync(command.Id).Result;
+                var subForum = await _subForumRepository.GetSubForumByIdAsync(command.Id);
                 if (subForum == null)
                 {
                     throw new Exception("SubForum not found");
                 }
-                if (!subForum.RowVersion.SequenceEqual(command.RowVersion))
-                {
-                    throw new Exception("SubForum has been modified by someone else. Please refresh and try again.");
-                }
-                _subForumRepository.DeleteSubForumAsync(command.Id);
-                _unitOfWork.Commit();
+
+                await _subForumRepository.DeleteSubForumAsync(command.Id);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
     }
 }
+

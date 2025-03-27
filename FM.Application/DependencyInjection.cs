@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using FM.Application.Interfaces.ICommand;
 using FM.Application.Command;
+using FM.Application.Interfaces.IQuery;
+using FM.Application.Query;
 
 namespace FM.Application
 {
@@ -13,8 +15,12 @@ namespace FM.Application
             services.AddScoped<IUserCommand, UserCommand>();
             services.AddScoped<IPostCommand, PostCommand>();
 
+            // Register the query interfaces
+            services.AddScoped<ISubForumQuery, SubForumQuery>();
+
             return services;
         }
     }
 }
+
 
