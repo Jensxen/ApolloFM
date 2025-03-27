@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FM.Domain.Entities;
-using FM.Application.Interfaces;
+using FM.Application.Interfaces.IRepositories;
 
 namespace ApolloAPI.Controllers;
 

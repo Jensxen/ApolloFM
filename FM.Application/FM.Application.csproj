@@ -14,4 +14,8 @@
     <ProjectReference Include="..\FM.Domain\FM.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Interfaces\IQuery\" />
+  </ItemGroup>
+
 </Project>

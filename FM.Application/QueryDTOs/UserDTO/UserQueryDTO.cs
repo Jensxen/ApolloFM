@@ -1,6 +1,6 @@
-﻿namespace FM.Application.DTOs.UserDTO
+﻿namespace FM.Application.QueryDTO.UserDTO
 {
-    public class UserDTO
+    public class UserQueryDTO
     {
         public string Id { get; set; }
         public string DisplayName { get; set; }

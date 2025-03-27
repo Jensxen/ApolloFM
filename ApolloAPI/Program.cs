@@ -1,4 +1,5 @@
 using FM.Infrastructure;
+using FM.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,9 @@ builder.Services.AddSwaggerGen();
 
 // Register infrastructure services
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Register application services
+builder.Services.AddApplicationServices();
 
 var app = builder.Build();
 

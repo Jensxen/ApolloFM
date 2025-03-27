@@ -1,6 +1,6 @@
-﻿namespace FM.Application.DTOs.SubForumDTO
+﻿namespace FM.Application.QueryDTO.SubForumDTO
 {
-    public class SubForumDTO
+    public class SubForumQueryDTO
     {
         public int Id { get; set; }
         public string Name { get; set; }

@@ -1,90 +1,96 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using FM.Application.Interfaces.ICommand;
+using FM.Application.Command.CommandDTO;
 using FM.Domain.Entities;
-using FM.Application.Interfaces;
-using Swashbuckle.AspNetCore.Annotations;
-using FM.Application.DTOs.SubForumDTO;
+using FM.Application.QueryDTO.SubForumDTO;
+using FM.Application.Interfaces.IRepositories;
+using FM.Application.Command.CommandDTO.SubForumCommandDTO;
 
-namespace ApolloAPI.Controllers;
-
-[ApiController]
-[Route("[controller]")]
-public class SubForumController : ControllerBase
+namespace ApolloAPI.Controllers
 {
-    private readonly ISubForumRepository _subForumRepository;
-    private readonly ILogger<SubForumController> _logger;
-
-    public SubForumController(ISubForumRepository subForumRepository, ILogger<SubForumController> logger)
+    [ApiController]
+    [Route("[controller]")]
+    public class SubForumController : ControllerBase
     {
-        _subForumRepository = subForumRepository;
-        _logger = logger;
-    }
+        private readonly ISubForumRepository _subForumRepository;
+        private readonly ISubForumCommand _subForumCommand;
 
-    [HttpGet]
-    public async Task<IEnumerable<SubForumDTO>> Get()
-    {
-        var subForums = await _subForumRepository.GetAllSubForumsAsync();
-        return subForums.Select(sf => new SubForumDTO
+        public SubForumController(ISubForumRepository subForumRepository, ISubForumCommand subForumCommand)
         {
-            Id = sf.Id,
-            Name = sf.Name,
-            Description = sf.Description
-        });
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<SubForumDTO>> Get(int id)
-    {
-        var subForum = await _subForumRepository.GetSubForumByIdAsync(id);
-        if (subForum == null)
-        {
-            return NotFound();
-        }
-        return new SubForumDTO
-        {
-            Id = subForum.Id,
-            Name = subForum.Name,
-            Description = subForum.Description
-        };
-    }
-
-    [HttpPost]
-    public async Task<ActionResult> Post([FromBody] SubForumCreateDTO subForumDto)
-    {
-        var subForum = new SubForum
-        {
-            Name = subForumDto.Name,
-            Description = subForumDto.Description
-        };
-
-        await _subForumRepository.AddSubForumAsync(subForum);
-        return CreatedAtAction(nameof(Get), new { id = subForum.Id }, new SubForumDTO
-        {
-            Id = subForum.Id,
-            Name = subForum.Name,
-            Description = subForum.Description
-        });
-    }
-
-    [HttpPut("{id}")]
-    public async Task<ActionResult> Put(int id, [FromBody] SubForumUpdateDTO subForumDto)
-    {
-        var subForum = await _subForumRepository.GetSubForumByIdAsync(id);
-        if (subForum == null)
-        {
-            return NotFound();
+            _subForumRepository = subForumRepository;
+            _subForumCommand = subForumCommand;
         }
 
-        subForum.Name = subForumDto.Name;
-        subForum.Description = subForumDto.Description;
+        [HttpGet]
+        public async Task<IEnumerable<SubForumQueryDTO>> Get()
+        {
+            var subForums = await _subForumRepository.GetAllSubForumsAsync();
+            return subForums.Select(sf => new SubForumQueryDTO
+            {
+                Id = sf.Id,
+                Name = sf.Name,
+                Description = sf.Description
+            });
+        }
 
-        await _subForumRepository.UpdateSubForumAsync(subForum);
-        return NoContent();
-    }
+        [HttpGet("{id}")]
+        public async Task<ActionResult<SubForumQueryDTO>> Get(int id)
+        {
+            var subForum = await _subForumRepository.GetSubForumByIdAsync(id);
+            if (subForum == null)
+            {
+                return NotFound();
+            }
+            return new SubForumQueryDTO
+            {
+                Id = subForum.Id,
+                Name = subForum.Name,
+                Description = subForum.Description
+            };
+        }
 
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(int id)
-    {
-        await _subForumRepository.DeleteSubForumAsync(id);
-        return NoContent();
+        [HttpPost]
+        public async Task<ActionResult> Post([FromBody] CreateSubForumCommandDTO command)
+        {
+            _subForumCommand.CreateSubForum(command);
+            var createdSubForum = await _subForumRepository.GetAllSubForumsAsync();
+            var newSubForum = createdSubForum.FirstOrDefault(sf => sf.Name == command.Name && sf.Description == command.Description);
+            if (newSubForum == null)
+            {
+                return BadRequest("SubForum creation failed.");
+            }
+            return CreatedAtAction(nameof(Get), new { id = newSubForum.Id }, new SubForumQueryDTO
+            {
+                Id = newSubForum.Id,
+                Name = newSubForum.Name,
+                Description = newSubForum.Description
+            });
+        }
+
+        [HttpPut("{id}")]
+        public ActionResult Put(int id, [FromBody] UpdateSubForumCommandDTO command)
+        {
+            if (id != command.Id)
+            {
+                return BadRequest();
+            }
+
+            _subForumCommand.UpdateSubForum(command);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public ActionResult Delete(int id, [FromBody] DeleteSubForumCommandDTO command)
+        {
+            if (id != command.Id)
+            {
+                return BadRequest();
+            }
+
+            _subForumCommand.DeleteSubForum(command);
+            return NoContent();
+        }
     }
 }
+
+

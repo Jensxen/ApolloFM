@@ -1,6 +1,6 @@
-﻿namespace FM.Application.DTOs.PostDTO
+﻿namespace FM.Application.QueryDTO.PostDTO
 {
-    public class PostDTO
+    public class PostQueryDTO
     {
         public int Id { get; set; }
         public string Title { get; set; }

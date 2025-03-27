@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FM.Domain.Entities
+namespace FM.Application.Command.CommandDTO.SubForumCommandDTO
 {
-    public class SubForum
+    public class UpdateSubForumCommandDTO
     {
-        public int Id { get; set; } // Primary key
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-        public ICollection<Post> Posts { get; set; } = new List<Post>();
-
-        [Timestamp]
         public byte[] RowVersion { get; set; }
     }
-
 }

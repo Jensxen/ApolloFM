@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +24,9 @@ namespace FM.Domain.Entities
         public SubForum SubForum { get; set; }
 
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
     }
 
 }

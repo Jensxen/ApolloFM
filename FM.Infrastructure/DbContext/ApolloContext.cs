@@ -21,8 +21,8 @@ namespace FM.Infrastructure.Database
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserRole)
                 .WithMany(r => r.Users)
-                .HasForeignKey(u => u.UserRoleId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(u => u.UserRoleId);
+                
 
             // Configure SubForum relationship
             modelBuilder.Entity<Post>()

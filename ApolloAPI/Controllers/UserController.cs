@@ -1,62 +1,92 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using FM.Application.Interfaces.ICommand;
+using FM.Application.Command.CommandDTO.UserCommandDTO;
+using FM.Application.QueryDTO;
 using FM.Domain.Entities;
-using FM.Application.Interfaces;
+using FM.Application.Interfaces.IRepositories;
+using FM.Application.QueryDTO.UserDTO;
 
-namespace ApolloAPI.Controllers;
-
-[ApiController]
-[Route("[controller]")]
-public class UserController : ControllerBase
+namespace ApolloAPI.Controllers
 {
-    private readonly IUserRepository _userRepository;
-    private readonly ILogger<UserController> _logger;
-
-    public UserController(IUserRepository userRepository, ILogger<UserController> logger)
+    [ApiController]
+    [Route("[controller]")]
+    public class UserController : ControllerBase
     {
-        _userRepository = userRepository;
-        _logger = logger;
-    }
+        private readonly IUserRepository _userRepository;
+        private readonly IUserCommand _userCommand;
 
-    [HttpGet]
-    public async Task<IEnumerable<User>> Get()
-    {
-        return await _userRepository.GetAllUsersAsync();
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<User>> Get(string id)
-    {
-        var user = await _userRepository.GetUserByIdAsync(id);
-        if (user == null)
+        public UserController(IUserRepository userRepository, IUserCommand userCommand)
         {
-            return NotFound();
-        }
-        return user;
-    }
-
-    [HttpPost]
-    public async Task<ActionResult> Post([FromBody] User user)
-    {
-        await _userRepository.AddUserAsync(user);
-        return CreatedAtAction(nameof(Get), new { id = user.Id }, user);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<ActionResult> Put(string id, [FromBody] User user)
-    {
-        if (id != user.Id)
-        {
-            return BadRequest();
+            _userRepository = userRepository;
+            _userCommand = userCommand;
         }
 
-        await _userRepository.UpdateUserAsync(user);
-        return NoContent();
-    }
+        [HttpGet]
+        public async Task<IEnumerable<UserQueryDTO>> Get()
+        {
+            var users = await _userRepository.GetAllUsersAsync();
+            return users.Select(u => new UserQueryDTO
+            {
+                Id = u.Id,
+                DisplayName = u.DisplayName,
+                SpotifyUserId = u.SpotifyUserId,
+                UserRoleId = u.UserRoleId
+            });
+        }
 
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(string id)
-    {
-        await _userRepository.DeleteUserAsync(id);
-        return NoContent();
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserQueryDTO>> Get(string id)
+        {
+            var user = await _userRepository.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            return new UserQueryDTO
+            {
+                Id = user.Id,
+                DisplayName = user.DisplayName,
+                SpotifyUserId = user.SpotifyUserId,
+                UserRoleId = user.UserRoleId
+            };
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Post([FromBody] CreateUserCommandDTO command)
+        {
+            _userCommand.CreateUser(command);
+            var createdUser = await _userRepository.GetUserByIdAsync(command.SpotifyUserId); // Assuming SpotifyUserId is unique
+            return CreatedAtAction(nameof(Get), new { id = createdUser.Id }, new UserQueryDTO
+            {
+                Id = createdUser.Id,
+                DisplayName = createdUser.DisplayName,
+                SpotifyUserId = createdUser.SpotifyUserId,
+                UserRoleId = createdUser.UserRoleId
+            });
+        }
+
+        [HttpPut("{id}")]
+        public ActionResult Put(string id, [FromBody] UpdateUserCommandDTO command)
+        {
+            if (id != command.Id)
+            {
+                return BadRequest();
+            }
+
+            _userCommand.UpdateUser(command);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public ActionResult Delete(string id, [FromBody] DeleteUserCommandDTO command)
+        {
+            if (id != command.Id)
+            {
+                return BadRequest();
+            }
+
+            _userCommand.DeleteUser(command);
+            return NoContent();
+        }
     }
 }

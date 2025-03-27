@@ -1,7 +1,7 @@
 ﻿using FM.Domain.Entities;
-using FM.Application.Interfaces;
 using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using FM.Application.Interfaces.IRepositories;
 
 namespace FM.Infrastucture.Repositories
 {

@@ -1,11 +1,11 @@
 ﻿using FM.Infrastructure.Repositories;
 using FM.Infrastructure.Database;
-using FM.Infrastucture.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using FM.Application.Interfaces.IRepositories;
 using FM.Application.Interfaces;
-
+using FM.Infrastucture.Repositories;
 
 namespace FM.Infrastructure
 {
@@ -29,3 +29,4 @@ namespace FM.Infrastructure
         }
     }
 }
+

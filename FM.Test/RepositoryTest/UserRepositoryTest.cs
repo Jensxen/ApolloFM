@@ -6,7 +6,7 @@ using Xunit;
 using Moq;
 using FM.Domain.Entities;
 using FM.Infrastructure.Repositories;
-using FM.Application.Interfaces;
+using FM.Application.Interfaces.IRepositories;
 
 namespace FM.Test.RepositoryTest
 {

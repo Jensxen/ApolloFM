@@ -19,6 +19,8 @@ namespace FM.Domain.Entities
         // Foreign key and navigation property for User
         public string UserId { get; set; }
         public User User { get; set; }
+
+        public byte[] RowVersion { get; set; }
     }
 
 }
