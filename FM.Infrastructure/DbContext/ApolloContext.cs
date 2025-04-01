@@ -22,7 +22,6 @@ namespace FM.Infrastructure.Database
                 .HasOne(u => u.UserRole)
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.UserRoleId);
-                
 
             // Configure SubForum relationship
             modelBuilder.Entity<Post>()

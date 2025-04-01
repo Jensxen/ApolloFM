@@ -16,21 +16,17 @@ namespace FM.Infrastructure.Repositories
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
-            return await _context.Users
-                .Include(u => u.UserRole)
-                .ToListAsync();
+            return await _context.Users.ToListAsync();
         }
 
         public async Task<User> GetUserByIdAsync(string id)
         {
-            return await _context.Users
-                .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            return await _context.Users.FindAsync(id);
         }
 
         public async Task AddUserAsync(User user)
         {
-            _context.Users.Add(user);
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
         }
 

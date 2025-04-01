@@ -21,9 +21,9 @@ namespace FM.Application.Command
             _subForumRepository = subForumRepository;
         }
 
-        void IPostCommand.CreatePost(CreatePostCommandDTO command)
+         public async Task CreatePostAsync(CreatePostCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var user = _userRepository.GetUserByIdAsync(command.UserId).Result;
@@ -58,9 +58,9 @@ namespace FM.Application.Command
             }
         }
 
-        void IPostCommand.UpdatePost(UpdatePostCommandDTO command)
+        public async Task UpdatePostAsync(UpdatePostCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+           await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var post = _postRepository.GetPostByIdAsync(command.Id).Result;
@@ -88,9 +88,9 @@ namespace FM.Application.Command
             }
         }
 
-        void IPostCommand.DeletePost(DeletePostCommandDTO command)
+        public async Task DeletePostAsync(DeletePostCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var post = _postRepository.GetPostByIdAsync(command.Id).Result;

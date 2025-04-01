@@ -2,8 +2,6 @@
 using FM.Application.Interfaces.ICommand;
 using FM.Application.Interfaces.IQuery;
 using FM.Application.Command.CommandDTO.SubForumCommandDTO;
-using FM.Application.QueryDTO.SubForumDTO;
-using System.Threading.Tasks;
 
 namespace ApolloAPI.Controllers
 {

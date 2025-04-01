@@ -1,62 +1,99 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using FM.Domain.Entities;
-using FM.Application.Interfaces.IRepositories;
+using FM.Application.Interfaces.ICommand;
+using FM.Application.Interfaces.IQuery;
+using FM.Application.Command.CommandDTO.PostCommandDTO;
+using FM.Application.QueryDTO.PostDTO;
+using System.Threading.Tasks;
 
-namespace ApolloAPI.Controllers;
-
-[ApiController]
-[Route("[controller]")]
-public class PostController : ControllerBase
+namespace ApolloAPI.Controllers
 {
-    private readonly IPostRepository _postRepository;
-    private readonly ILogger<PostController> _logger;
-
-    public PostController(IPostRepository postRepository, ILogger<PostController> logger)
+    [ApiController]
+    [Route("api")]
+    public class PostController : ControllerBase
     {
-        _postRepository = postRepository;
-        _logger = logger;
-    }
+        private readonly IPostQuery _postQuery;
+        private readonly IPostCommand _postCommand;
 
-    [HttpGet]
-    public async Task<IEnumerable<Post>> Get()
-    {
-        return await _postRepository.GetAllPostsAsync();
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Post>> Get(int id)
-    {
-        var post = await _postRepository.GetPostByIdAsync(id);
-        if (post == null)
+        public PostController(IPostQuery postQuery, IPostCommand postCommand)
         {
-            return NotFound();
-        }
-        return post;
-    }
-
-    [HttpPost]
-    public async Task<ActionResult> Post([FromBody] Post post)
-    {
-        await _postRepository.AddPostAsync(post);
-        return CreatedAtAction(nameof(Get), new { id = post.Id }, post);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<ActionResult> Put(int id, [FromBody] Post post)
-    {
-        if (id != post.Id)
-        {
-            return BadRequest();
+            _postQuery = postQuery;
+            _postCommand = postCommand;
         }
 
-        await _postRepository.UpdatePostAsync(post);
-        return NoContent();
-    }
+        [HttpGet("Posts")]
+        public async Task<IActionResult> GetAllPosts()
+        {
+            try
+            {
+                var posts = await _postQuery.GetAllPostsAsync();
+                return Ok(posts);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(int id)
-    {
-        await _postRepository.DeletePostAsync(id);
-        return NoContent();
+        [HttpGet("Posts/{id}")]
+        public async Task<IActionResult> GetPostById(int id)
+        {
+            try
+            {
+                var post = await _postQuery.GetPostByIdAsync(id);
+                if (post == null)
+                {
+                    return NotFound();
+                }
+                return Ok(post);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("Posts")]
+        public async Task<IActionResult> AddPost([FromBody] CreatePostCommandDTO command)
+        {
+            try
+            {
+                await _postCommand.CreatePostAsync(command);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPut("Posts/{id}")]
+        public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostCommandDTO command)
+        {
+            try
+            {
+                command.Id = id;
+                await _postCommand.UpdatePostAsync(command);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpDelete("Posts/{id}")]
+        public async Task<IActionResult> DeletePost(int id, [FromBody] DeletePostCommandDTO command)
+        {
+            try
+            {
+                command.Id = id;
+                await _postCommand.DeletePostAsync(command);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

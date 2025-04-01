@@ -3,6 +3,8 @@ using FM.Application.Interfaces.ICommand;
 using FM.Application.Command;
 using FM.Application.Interfaces.IQuery;
 using FM.Application.Query;
+using FM.Application.Interfaces.IRepositories;
+using FM.Domain.Entities;
 
 namespace FM.Application
 {
@@ -14,9 +16,12 @@ namespace FM.Application
             services.AddScoped<ISubForumCommand, SubForumCommand>();
             services.AddScoped<IUserCommand, UserCommand>();
             services.AddScoped<IPostCommand, PostCommand>();
+            
 
             // Register the query interfaces
             services.AddScoped<ISubForumQuery, SubForumQuery>();
+            services.AddScoped<IPostQuery, PostQuery>();
+            services.AddScoped<IUserQuery, UserQuery>();
 
             return services;
         }

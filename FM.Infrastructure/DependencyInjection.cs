@@ -21,6 +21,7 @@ namespace FM.Infrastructure
             services.AddScoped<ISubForumRepository, SubForumRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPostRepository, PostRepository>();
+            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 
             // Register the UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork>();

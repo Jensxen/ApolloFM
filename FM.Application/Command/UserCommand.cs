@@ -17,77 +17,71 @@ namespace FM.Application.Command
             _unitOfWork = unitOfWork;
         }
 
-        void IUserCommand.CreateUser(CreateUserCommandDTO command)
+        public async Task CreateUserAsync(CreateUserCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var user = new User
                 {
+                    Id = Guid.NewGuid().ToString(),
                     DisplayName = command.DisplayName,
                     SpotifyUserId = command.SpotifyUserId,
                     UserRoleId = command.UserRoleId
                 };
 
-                _userRepository.AddUserAsync(user);
-                _unitOfWork.Commit();
+                await _userRepository.AddUserAsync(user);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
 
-        void IUserCommand.UpdateUser(UpdateUserCommandDTO command)
+        public async Task UpdateUserAsync(UpdateUserCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = _userRepository.GetUserByIdAsync(command.Id).Result;
+                var user = await _userRepository.GetUserByIdAsync(command.Id);
                 if (user == null)
                 {
                     throw new Exception("User not found");
                 }
-                if (!user.RowVersion.SequenceEqual(command.RowVersion))
-                {
-                    throw new Exception("User has been modified by someone else. Please refresh and try again.");
-                }
+
                 user.DisplayName = command.DisplayName;
                 user.SpotifyUserId = command.SpotifyUserId;
                 user.UserRoleId = command.UserRoleId;
 
-                _userRepository.UpdateUserAsync(user);
-                _unitOfWork.Commit();
+                await _userRepository.UpdateUserAsync(user);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
 
-        void IUserCommand.DeleteUser(DeleteUserCommandDTO command)
+        public async Task DeleteUserAsync(DeleteUserCommandDTO command)
         {
-            _unitOfWork.BeginTransaction();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = _userRepository.GetUserByIdAsync(command.Id).Result;
+                var user = await _userRepository.GetUserByIdAsync(command.Id);
                 if (user == null)
                 {
                     throw new Exception("User not found");
                 }
-                if (!user.RowVersion.SequenceEqual(command.RowVersion))
-                {
-                    throw new Exception("User has been modified by someone else. Please refresh and try again.");
-                }
 
-                _userRepository.DeleteUserAsync(command.Id);
-                _unitOfWork.Commit();
+                await _userRepository.DeleteUserAsync(command.Id);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
