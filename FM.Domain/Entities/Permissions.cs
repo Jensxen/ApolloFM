@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FM.Domain.Entities
+﻿namespace FM.Domain.Entities
 {
     public static class Permissions
     {
@@ -17,10 +11,13 @@ namespace FM.Domain.Entities
         public const string CreateSubForum = "CreateSubForum";
         public const string EditSubForum = "EditSubForum";
         public const string DeleteSubForum = "DeleteSubForum";
-        public const string BanUser = "BanUser";
-        public const string UnbanUser = "UnbanUser";
+        public const string BanUserFromSubForum = "BanUserFromSubForum";
+        public const string UnbanUserFromSubForum = "UnbanUserFromSubForum";
+        public const string BanUserFromForum = "BanUserFromForum";
+        public const string UnbanUserFromForum = "UnbanUserFromForum";
         public const string PromoteToSubForumModerator = "PromoteToSubForumModerator";
         public const string PromoteToForumAdmin = "PromoteToForumAdmin";
         public const string DemoteToUser = "DemoteToUser";
     }
 }
+

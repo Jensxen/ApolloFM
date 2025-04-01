@@ -14,6 +14,7 @@ namespace FM.Infrastructure.Database
         public DbSet<Comment> Comments { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<SubForum> SubForums { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -43,6 +44,12 @@ namespace FM.Infrastructure.Database
                 .WithMany(u => u.Comments)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure UserRole-Permission relationship
+            modelBuilder.Entity<UserRole>()
+                .HasMany(r => r.Permissions)
+                .WithMany(p => p.UserRoles)
+                .UsingEntity(j => j.ToTable("UserRolePermissions"));
 
             base.OnModelCreating(modelBuilder);
         }

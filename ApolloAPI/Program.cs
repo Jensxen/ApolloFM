@@ -1,5 +1,7 @@
 using FM.Infrastructure;
 using FM.Application;
+using FM.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices();
 
 var app = builder.Build();
+
+// Seed the database
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    var context = services.GetRequiredService<ApolloContext>();
+//    context.Database.Migrate();
+//    ApolloContextSeeder.Seed(context);
+//}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

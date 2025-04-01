@@ -1,29 +1,28 @@
-using FM.Application.Interfaces;
-using FM.Infrastucture;
-using Microsoft.AspNetCore.Components.Web;
+using ApolloFM;
+using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.EntityFrameworkCore;
-using ApolloFM;
-using FM.Infrastructure.Repositories;
-using FM.Infrastructure.Database;
-using FM.Infrastucture.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Register HttpClient
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-// Retrieve the connection string from configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Add your DbContext
+builder.Services.AddDbContext<ApolloContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register DbContext (if using EF Core)
-builder.Services.AddDbContextFactory<ApolloContext>(options =>
-    options.UseNpgsql(connectionString));
+// Build the host
+var host = builder.Build();
 
-// Register repositories and services
+// Seed the database
+//using (var scope = host.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    var context = services.GetRequiredService<ApolloContext>();
+//    context.Database.Migrate();
+//    ApolloContextSeeder.Seed(context);
+//}
 
-
-// Build and run the application
-await builder.Build().RunAsync();
+await host.RunAsync();

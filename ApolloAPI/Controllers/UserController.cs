@@ -84,9 +84,13 @@ namespace ApolloAPI.Controllers
         [HttpDelete("Users/{id}")]
         public async Task<IActionResult> DeleteUser(string id, [FromBody] DeleteUserCommandDTO command)
         {
+            if (id != command.Id)
+            {
+                return BadRequest("User ID mismatch");
+            }
+
             try
             {
-                command.Id = id;
                 await _userCommand.DeleteUserAsync(command);
                 return Ok();
             }
@@ -97,5 +101,6 @@ namespace ApolloAPI.Controllers
         }
     }
 }
+
 
 
