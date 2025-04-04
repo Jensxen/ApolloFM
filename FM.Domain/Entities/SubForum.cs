@@ -9,13 +9,29 @@ namespace FM.Domain.Entities
 {
     public class SubForum
     {
-        public int Id { get; set; } // Primary key
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public ICollection<Post> Posts { get; set; } = new List<Post>();
+        public int Id { get; protected set; } // Primary key
+        public string Name { get; protected set; }
+        public string Description { get; protected set; }
+        public ICollection<Post> Posts { get; protected set; } = new List<Post>();
 
         [Timestamp]
-        public byte[] RowVersion { get; set; }
+        public byte[] RowVersion { get; protected set; }
+
+        public SubForum(string name, string description)
+        {
+            Name = name;
+            Description = description;
+        }
+
+        public void UpdateName(string name)
+        {
+            Name = name;
+        }
+
+        public void UpdateDescription(string description)
+        {
+            Description = description;
+        }
     }
 
 }

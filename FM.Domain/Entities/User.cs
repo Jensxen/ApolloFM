@@ -9,17 +9,38 @@ namespace FM.Domain.Entities
 {
     public class User
     {
-        public string Id { get; set; } // Primary key
-        public string DisplayName { get; set; }
-        public string SpotifyUserId { get; set; } // Spotify user ID
+        public string Id { get; protected set; } // Primary key
+        public string DisplayName { get; protected set; }
+        public string SpotifyUserId { get; protected set; } // Spotify user ID
+        public int UserRoleId { get; protected set; }
+        public UserRole UserRole { get; protected set; }
+        public ICollection<Post> Posts { get; protected set; } = new List<Post>();
+        public ICollection<Comment> Comments { get; protected set; } = new List<Comment>();
+        public byte[] RowVersion { get; protected set; }
 
-        public int UserRoleId { get; set; }
-        public UserRole UserRole { get; set; }
-        public ICollection<Post> Posts { get; set; } = new List<Post>();
-        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+        // Constructor to set initial values including Id
+        public User(string id, string displayName, string spotifyUserId, int userRoleId)
+        {
+            Id = id;
+            DisplayName = displayName;
+            SpotifyUserId = spotifyUserId;
+            UserRoleId = userRoleId;
+        }
 
-        [Timestamp]
-        public byte[] RowVersion { get; set; }
+        public void UpdateDisplayName(string displayName)
+        {
+            DisplayName = displayName;
+        }
+
+        public void UpdateSpotifyUserId(string spotifyUserId)
+        {
+            SpotifyUserId = spotifyUserId;
+        }
+
+        public void UpdateUserRoleId(int userRoleId)
+        {
+            UserRoleId = userRoleId;
+        }
     }
 
 }

@@ -9,5 +9,6 @@ namespace FM.Application.Command.CommandDTO.UserCommandDTO
     public class DeleteUserCommandDTO
     {
         public string Id { get; set; }
+        public byte[] RowVersion { get; set; }
     }
 }

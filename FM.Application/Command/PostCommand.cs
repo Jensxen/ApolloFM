@@ -21,13 +21,13 @@ namespace FM.Application.Command
             _subForumRepository = subForumRepository;
         }
 
-         public async Task CreatePostAsync(CreatePostCommandDTO command)
+        public async Task CreatePostAsync(CreatePostCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = _userRepository.GetUserByIdAsync(command.UserId).Result;
-                var subForum = _subForumRepository.GetSubForumByIdAsync(command.SubForumId).Result;
+                var user = await _userRepository.GetUserByIdAsync(command.UserId);
+                var subForum = await _subForumRepository.GetSubForumByIdAsync(command.SubForumId);
 
                 if (user == null)
                 {
@@ -38,52 +38,43 @@ namespace FM.Application.Command
                     throw new Exception("Sub Forum not found");
                 }
 
-                var post = new Post()
-                {
-                    Title = command.Title,
-                    Content = command.Content,
-                    CreatedAt = DateTime.UtcNow,
-                    SpotifyPlaylistId = command.SpotifyPlaylistId,
-                    UserId = command.UserId,
-                    SubForumId = command.SubForumId
-                };
+                var post = new Post(command.Title, command.Content, command.SpotifyPlaylistId, command.UserId, command.SubForumId);
 
-                _postRepository.AddPostAsync(post);
-                _unitOfWork.Commit();
+                await _postRepository.AddPostAsync(post);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
 
         public async Task UpdatePostAsync(UpdatePostCommandDTO command)
         {
-           await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var post = _postRepository.GetPostByIdAsync(command.Id).Result;
+                var post = await _postRepository.GetPostByIdAsync(command.Id);
                 if (post == null)
                 {
                     throw new Exception("Post not found");
                 }
-                if (post.RowVersion != command.RowVersion)
+                if (!post.RowVersion.SequenceEqual(command.RowVersion))
                 {
                     throw new Exception("The post has been modified by someone else. Please refresh and try again.");
                 }
 
-                post.Title = command.Title;
-                post.Content = command.Content;
-                post.SpotifyPlaylistId = command.SpotifyPlaylistId;
+                post.UpdateTitle(command.Title);
+                post.UpdateContent(command.Content);
+                post.UpdateSpotifyPlaylistId(command.SpotifyPlaylistId);
 
-                _postRepository.UpdatePostAsync(post);
-                _unitOfWork.Commit();
-
+                await _postRepository.UpdatePostAsync(post);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }
@@ -93,22 +84,22 @@ namespace FM.Application.Command
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var post = _postRepository.GetPostByIdAsync(command.Id).Result;
+                var post = await _postRepository.GetPostByIdAsync(command.Id);
                 if (post == null)
                 {
                     throw new Exception("Post not found");
                 }
-                if (post.RowVersion != command.RowVersion)
+                if (!post.RowVersion.SequenceEqual(command.RowVersion))
                 {
                     throw new Exception("The post has been modified by someone else. Please refresh and try again.");
                 }
 
-                _postRepository.DeletePostAsync(command.Id);
-                _unitOfWork.Commit();
+                await _postRepository.DeletePostAsync(command.Id);
+                await _unitOfWork.CommitAsync();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync();
                 throw;
             }
         }

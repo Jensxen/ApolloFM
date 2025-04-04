@@ -19,16 +19,12 @@ namespace FM.Application.Command
             _unitOfWork = unitOfWork;
         }
 
-        public async Task CreateSubForum(CreateSubForumCommandDTO command)
+        public async Task CreateSubForumAsync(CreateSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var subForum = new SubForum
-                {
-                    Name = command.Name,
-                    Description = command.Description,
-                };
+                var subForum = new SubForum(command.Name, command.Description);
 
                 await _subForumRepository.AddSubForumAsync(subForum);
                 await _unitOfWork.CommitAsync();
@@ -40,7 +36,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task UpdateSubForum(UpdateSubForumCommandDTO command)
+        public async Task UpdateSubForumAsync(UpdateSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -50,9 +46,13 @@ namespace FM.Application.Command
                 {
                     throw new Exception("SubForum not found");
                 }
+                if (!subForum.RowVersion.SequenceEqual(command.RowVersion))
+                {
+                    throw new Exception("The subforum has been modified by someone else. Please refresh and try again.");
+                }
 
-                subForum.Name = command.Name;
-                subForum.Description = command.Description;
+                subForum.UpdateName(command.Name);
+                subForum.UpdateDescription(command.Description);
 
                 await _subForumRepository.UpdateSubForumAsync(subForum);
                 await _unitOfWork.CommitAsync();
@@ -64,7 +64,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task DeleteSubForum(DeleteSubForumCommandDTO command)
+        public async Task DeleteSubForumAsync(DeleteSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -73,6 +73,10 @@ namespace FM.Application.Command
                 if (subForum == null)
                 {
                     throw new Exception("SubForum not found");
+                }
+                if (!subForum.RowVersion.SequenceEqual(command.RowVersion))
+                {
+                    throw new Exception("The subforum has been modified by someone else. Please refresh and try again.");
                 }
 
                 await _subForumRepository.DeleteSubForumAsync(command.Id);

@@ -9,6 +9,7 @@ namespace FM.Application.Command.CommandDTO.SubForumCommandDTO
     public class DeleteSubForumCommandDTO
     {
         public int Id { get; set; }
-        
+        public byte[] RowVersion { get; set; }
+
     }
 }
