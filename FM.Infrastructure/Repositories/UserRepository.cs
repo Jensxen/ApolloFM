@@ -1,7 +1,8 @@
-﻿using FM.Domain.Entities;
+﻿using System.Threading.Tasks;
+using FM.Application.Interfaces.IRepositories;
+using FM.Domain.Entities;
 using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
-using FM.Application.Interfaces.IRepositories;
 
 namespace FM.Infrastructure.Repositories
 {
@@ -12,11 +13,6 @@ namespace FM.Infrastructure.Repositories
         public UserRepository(ApolloContext context)
         {
             _context = context;
-        }
-
-        public async Task<IEnumerable<User>> GetAllUsersAsync()
-        {
-            return await _context.Users.ToListAsync();
         }
 
         public async Task<User> GetUserByIdAsync(string id)
@@ -36,14 +32,23 @@ namespace FM.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteUserAsync(string id)
+        public async Task DeleteUserAsync(string id, byte[] rowVersion)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user != null)
+            if (user == null)
             {
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
+                throw new Exception("User not found");
             }
+
+            if (!user.RowVersion.SequenceEqual(rowVersion))
+            {
+                throw new DbUpdateConcurrencyException("The user has been modified by another process.");
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
         }
     }
 }
+
+

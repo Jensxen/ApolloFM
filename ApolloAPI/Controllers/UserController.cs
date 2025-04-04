@@ -20,19 +20,19 @@ namespace ApolloAPI.Controllers
             _userCommand = userCommand;
         }
 
-        [HttpGet("Users")]
-        public async Task<IActionResult> GetAllUsers()
-        {
-            try
-            {
-                var users = await _userQuery.GetAllUsersAsync();
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpGet("Users")]
+        //public async Task<IActionResult> GetAllUsers()
+        //{
+        //    try
+        //    {
+        //        var users = await _userQuery.GetAllUsersAsync();
+        //        return Ok(users);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
         [HttpGet("Users/{id}")]
         public async Task<IActionResult> GetUserById(string id)

@@ -9,10 +9,9 @@ namespace FM.Application.Interfaces.IRepositories
 {
     public interface IUserRepository
     {
-        Task<IEnumerable<User>> GetAllUsersAsync();
         Task<User> GetUserByIdAsync(string id);
         Task AddUserAsync(User user);
         Task UpdateUserAsync(User user);
-        Task DeleteUserAsync(string id);
+        Task DeleteUserAsync(string id, byte[] rowVersion);
     }
 }

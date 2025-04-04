@@ -3,6 +3,7 @@ using FM.Domain.Entities;
 using FM.Application.Interfaces.IRepositories;
 using FM.Application.Interfaces;
 using FM.Application.Command.CommandDTO.UserCommandDTO;
+using System.Threading.Tasks;
 
 namespace FM.Application.Command
 {
@@ -24,7 +25,7 @@ namespace FM.Application.Command
             {
                 var user = new User
                 {
-                    Id = Guid.NewGuid().ToString(),
+                    Id = Guid.NewGuid().ToString(), // Set the Id to a new GUID
                     DisplayName = command.DisplayName,
                     SpotifyUserId = command.SpotifyUserId,
                     UserRoleId = command.UserRoleId
@@ -76,7 +77,7 @@ namespace FM.Application.Command
                     throw new Exception("User not found");
                 }
 
-                await _userRepository.DeleteUserAsync(command.Id);
+                await _userRepository.DeleteUserAsync(command.Id, user.RowVersion);
                 await _unitOfWork.CommitAsync();
             }
             catch

@@ -13,17 +13,17 @@ namespace FM.Application.Query
             _userRepository = userRepository;
         }
 
-        public async Task<IEnumerable<UserQueryDTO>> GetAllUsersAsync()
-        {
-            var users = await _userRepository.GetAllUsersAsync();
-            return users.Select(u => new UserQueryDTO()
-            {
-                Id = u.Id,
-                DisplayName = u.DisplayName,
-                SpotifyUserId = u.SpotifyUserId,
-                UserRoleId = u.UserRoleId
-            });
-        }
+        //public async Task<IEnumerable<UserQueryDTO>> GetAllUsersAsync()
+        //{
+        //    var users = await _userRepository.GetAllUsersAsync();
+        //    return users.Select(u => new UserQueryDTO()
+        //    {
+        //        Id = u.Id,
+        //        DisplayName = u.DisplayName,
+        //        SpotifyUserId = u.SpotifyUserId,
+        //        UserRoleId = u.UserRoleId
+        //    });
+        //}
 
         public async Task<UserQueryDTO> GetUserByIdAsync(string id)
         {
