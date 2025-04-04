@@ -40,11 +40,7 @@ namespace FM.Infrastructure.Repositories
                 throw new Exception("User not found");
             }
 
-            if (!user.RowVersion.SequenceEqual(rowVersion))
-            {
-                throw new DbUpdateConcurrencyException("The user has been modified by another process.");
-            }
-
+            _context.Entry(user).Property(u => u.RowVersion).OriginalValue = rowVersion;
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
         }

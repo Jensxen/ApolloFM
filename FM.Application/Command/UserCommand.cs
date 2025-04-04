@@ -46,7 +46,7 @@ namespace FM.Application.Command
                     throw new Exception("User not found");
                 }
 
-                if (!user.RowVersion.SequenceEqual(command.RowVersion))
+                if (command.RowVersion == null || !user.RowVersion.SequenceEqual(command.RowVersion))
                 {
                     throw new Exception("The user has been modified by someone else. Please refresh and try again.");
                 }
@@ -76,7 +76,7 @@ namespace FM.Application.Command
                     throw new Exception("User not found");
                 }
 
-                if (!user.RowVersion.SequenceEqual(command.RowVersion))
+                if (command.RowVersion == null || !user.RowVersion.SequenceEqual(command.RowVersion))
                 {
                     throw new Exception("The user has been modified by someone else. Please refresh and try again.");
                 }

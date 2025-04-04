@@ -16,12 +16,13 @@ namespace FM.Application.Query
         //public async Task<IEnumerable<UserQueryDTO>> GetAllUsersAsync()
         //{
         //    var users = await _userRepository.GetAllUsersAsync();
-        //    return users.Select(u => new UserQueryDTO()
+        //    return users.Select(user => new UserQueryDTO
         //    {
-        //        Id = u.Id,
-        //        DisplayName = u.DisplayName,
-        //        SpotifyUserId = u.SpotifyUserId,
-        //        UserRoleId = u.UserRoleId
+        //        Id = user.Id,
+        //        DisplayName = user.DisplayName,
+        //        SpotifyUserId = user.SpotifyUserId,
+        //        UserRoleId = user.UserRoleId,
+        //        RowVersion = user.RowVersion
         //    });
         //}
 
@@ -32,15 +33,15 @@ namespace FM.Application.Query
             {
                 return null;
             }
+
             return new UserQueryDTO
             {
                 Id = user.Id,
                 DisplayName = user.DisplayName,
                 SpotifyUserId = user.SpotifyUserId,
-                UserRoleId = user.UserRoleId
+                UserRoleId = user.UserRoleId,
+                RowVersion = user.RowVersion
             };
         }
-
-        
     }
 }

@@ -20,20 +20,6 @@ namespace ApolloAPI.Controllers
             _userCommand = userCommand;
         }
 
-        //[HttpGet("Users")]
-        //public async Task<IActionResult> GetAllUsers()
-        //{
-        //    try
-        //    {
-        //        var users = await _userQuery.GetAllUsersAsync();
-        //        return Ok(users);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
-
         [HttpGet("Users/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {
@@ -82,15 +68,22 @@ namespace ApolloAPI.Controllers
         }
 
         [HttpDelete("Users/{id}")]
-        public async Task<IActionResult> DeleteUser(string id, [FromBody] DeleteUserCommandDTO command)
+        public async Task<IActionResult> DeleteUser(string id)
         {
-            if (id != command.Id)
-            {
-                return BadRequest("User ID mismatch");
-            }
-
             try
             {
+                var user = await _userQuery.GetUserByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var command = new DeleteUserCommandDTO
+                {
+                    Id = id,
+                    RowVersion = user.RowVersion
+                };
+
                 await _userCommand.DeleteUserAsync(command);
                 return Ok();
             }
@@ -101,6 +94,4 @@ namespace ApolloAPI.Controllers
         }
     }
 }
-
-
 

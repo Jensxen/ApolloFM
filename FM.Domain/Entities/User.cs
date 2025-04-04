@@ -16,7 +16,12 @@ namespace FM.Domain.Entities
         public UserRole UserRole { get; protected set; }
         public ICollection<Post> Posts { get; protected set; } = new List<Post>();
         public ICollection<Comment> Comments { get; protected set; } = new List<Comment>();
+
+        [Timestamp]
         public byte[] RowVersion { get; protected set; }
+
+
+        protected User() { }
 
         // Constructor to set initial values including Id
         public User(string id, string displayName, string spotifyUserId, int userRoleId)

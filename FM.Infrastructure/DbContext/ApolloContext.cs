@@ -51,8 +51,40 @@ namespace FM.Infrastructure.Database
                 .WithMany(p => p.UserRoles)
                 .UsingEntity(j => j.ToTable("UserRolePermissions"));
 
+            // Configure RowVersion as a concurrency token
+            modelBuilder.Entity<User>()
+                .Property(u => u.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
+            modelBuilder.Entity<Post>()
+                .Property(p => p.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
+            modelBuilder.Entity<Comment>()
+                .Property(c => c.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
+            modelBuilder.Entity<SubForum>()
+                .Property(s => s.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
+            modelBuilder.Entity<UserRole>()
+                .Property(r => r.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
+            modelBuilder.Entity<Permission>()
+                .Property(p => p.RowVersion)
+                .IsRowVersion()
+                .ValueGeneratedOnAddOrUpdate();
+
             base.OnModelCreating(modelBuilder);
         }
     }
 }
+
 

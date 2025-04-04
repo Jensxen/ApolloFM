@@ -55,7 +55,7 @@ namespace ApolloAPI.Controllers
         {
             try
             {
-                await _subForumCommand.CreateSubForum(command);
+                await _subForumCommand.CreateSubForumAsync(command);
                 return Ok();
             }
             catch (Exception ex)
@@ -70,7 +70,7 @@ namespace ApolloAPI.Controllers
             try
             {
                 command.Id = id;
-                await _subForumCommand.UpdateSubForum(command);
+                await _subForumCommand.UpdateSubForumAsync(command);
                 return Ok();
             }
             catch (Exception ex)
@@ -85,7 +85,7 @@ namespace ApolloAPI.Controllers
             try
             {
                 command.Id = id;
-                await _subForumCommand.DeleteSubForum(command);
+                await _subForumCommand.DeleteSubForumAsync(command);
                 return Ok();
             }
             catch (Exception ex)
