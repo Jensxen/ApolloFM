@@ -5,6 +5,7 @@ using FM.Application.Interfaces.IQuery;
 using FM.Application.Query;
 using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
+using FM.Application.Services;
 
 namespace FM.Application
 {
@@ -22,6 +23,9 @@ namespace FM.Application
             services.AddScoped<ISubForumQuery, SubForumQuery>();
             services.AddScoped<IPostQuery, PostQuery>();
             services.AddScoped<IUserQuery, UserQuery>();
+
+            // Services
+            services.AddScoped<SpotifyService>();
 
             return services;
         }

@@ -1,7 +1,48 @@
-﻿@page "/"
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<h1>Welcome to ApolloFM</h1>
+<p>Connect your Spotify account and share your favorite songs!</p>
 
-<h1>Hello, world!</h1>
+@if (!isLoggedIn)
+{
+	<button class="btn btn-primary" @onclick="Login">Login with Spotify</button>
+}
+else
+{
+	<p>Welcome back, @userName!</p>
+	<button class="btn btn-secondary" @onclick="Logout">Logout</button>
+}
 
-Welcome to your new app.
+@code {
+	private bool isLoggedIn = false;
+	private string userName;
+
+	// Inject the AuthenticationStateProvider
+	@inject AuthenticationStateProvider AuthenticationStateProvider
+	@inject NavigationManager Navigation
+
+	protected override async Task OnInitializedAsync()
+	{
+		// Check if the user is authenticated
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		if (user.Identity != null && user.Identity.IsAuthenticated)
+		{
+			isLoggedIn = true;
+			userName = user.Identity.Name ?? "Spotify User";
+		}
+	}
+
+	private void Login()
+	{
+		Navigation.NavigateTo("authentication/login");
+	}
+
+	private async Task Logout()
+	{
+		await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		Navigation.NavigateTo("authentication/logout");
+	}
+}
