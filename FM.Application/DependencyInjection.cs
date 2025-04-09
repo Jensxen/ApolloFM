@@ -16,7 +16,7 @@ namespace FM.Application
             services.AddScoped<ISubForumCommand, SubForumCommand>();
             services.AddScoped<IUserCommand, UserCommand>();
             services.AddScoped<IPostCommand, PostCommand>();
-            
+            services.AddScoped<ICommentCommand, CommentCommand>();
 
             // Register the query interfaces
             services.AddScoped<ISubForumQuery, SubForumQuery>();

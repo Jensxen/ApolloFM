@@ -5,8 +5,8 @@ namespace FM.Application.Interfaces.ICommand
 {
     public interface ISubForumCommand
     {
-        Task CreateSubForumAsync(CreateSubForumCommandDTO command);
-        Task UpdateSubForumAsync(UpdateSubForumCommandDTO command);
-        Task DeleteSubForumAsync(DeleteSubForumCommandDTO command);
+        public Task CreateSubForumAsync(CreateSubForumCommandDTO command);
+        public Task UpdateSubForumAsync(UpdateSubForumCommandDTO command);
+        public Task DeleteSubForumAsync(DeleteSubForumCommandDTO command);
     }
 }

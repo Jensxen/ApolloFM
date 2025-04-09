@@ -31,12 +31,12 @@ namespace FM.Infrastructure.Database
                 .HasForeignKey(p => p.SubForumId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Configure Post-Comment relationship
+            // Configure Post-Comment relationship with Cascade Delete
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade); // Enable cascade delete
 
             // Configure User-Comment relationship
             modelBuilder.Entity<Comment>()

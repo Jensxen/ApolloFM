@@ -18,7 +18,7 @@ namespace FM.Application.Command
             _unitOfWork = unitOfWork;
         }
 
-        public async Task CreateUserAsync(CreateUserCommandDTO command)
+        async Task IUserCommand.CreateUserAsync(CreateUserCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -35,7 +35,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task UpdateUserAsync(UpdateUserCommandDTO command)
+        async Task IUserCommand.UpdateUserAsync(UpdateUserCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -65,7 +65,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task DeleteUserAsync(DeleteUserCommandDTO command)
+        async Task IUserCommand.DeleteUserAsync(DeleteUserCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try

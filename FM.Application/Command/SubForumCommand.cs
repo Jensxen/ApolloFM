@@ -19,7 +19,7 @@ namespace FM.Application.Command
             _unitOfWork = unitOfWork;
         }
 
-        public async Task CreateSubForumAsync(CreateSubForumCommandDTO command)
+        async Task ISubForumCommand.CreateSubForumAsync(CreateSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -36,7 +36,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task UpdateSubForumAsync(UpdateSubForumCommandDTO command)
+        async Task ISubForumCommand.UpdateSubForumAsync(UpdateSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -64,7 +64,7 @@ namespace FM.Application.Command
             }
         }
 
-        public async Task DeleteSubForumAsync(DeleteSubForumCommandDTO command)
+        async Task ISubForumCommand.DeleteSubForumAsync(DeleteSubForumCommandDTO command)
         {
             await _unitOfWork.BeginTransactionAsync();
             try

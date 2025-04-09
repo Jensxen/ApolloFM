@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using FM.Application.QueryDTO.CommentDTO;
 using FM.Application.Interfaces.IQuery;
 using FM.Application.Interfaces.IRepositories;
 using FM.Application.QueryDTO.PostDTO;
@@ -26,7 +25,15 @@ namespace FM.Application.Query
                 CreatedAt = p.CreatedAt,
                 SpotifyPlaylistId = p.SpotifyPlaylistId,
                 UserId = p.UserId,
-                SubForumId = p.SubForumId
+                SubForumId = p.SubForumId,
+                Comments = p.Comments.Select(c => new CommentQueryDTO
+                {
+                    Id = c.Id,
+                    Content = c.Content,
+                    CreatedAt = c.CreatedAt,
+                    UserId = c.UserId,
+                    PostId = c.PostId
+                })
             });
         }
 
@@ -45,7 +52,15 @@ namespace FM.Application.Query
                 CreatedAt = post.CreatedAt,
                 SpotifyPlaylistId = post.SpotifyPlaylistId,
                 UserId = post.UserId,
-                SubForumId = post.SubForumId
+                SubForumId = post.SubForumId,
+                Comments = post.Comments.Select(c => new CommentQueryDTO
+                {
+                    Id = c.Id,
+                    Content = c.Content,
+                    CreatedAt = c.CreatedAt,
+                    UserId = c.UserId,
+                    PostId = c.PostId
+                })
             };
         }
     }

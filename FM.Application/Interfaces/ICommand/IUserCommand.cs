@@ -5,8 +5,8 @@ namespace FM.Application.Interfaces.ICommand
 {
     public interface IUserCommand
     {
-        Task CreateUserAsync(CreateUserCommandDTO command);
-        Task UpdateUserAsync(UpdateUserCommandDTO command);
-        Task DeleteUserAsync(DeleteUserCommandDTO command);
+        public Task CreateUserAsync(CreateUserCommandDTO command);
+        public Task UpdateUserAsync(UpdateUserCommandDTO command);
+        public Task DeleteUserAsync(DeleteUserCommandDTO command);
     }
 }

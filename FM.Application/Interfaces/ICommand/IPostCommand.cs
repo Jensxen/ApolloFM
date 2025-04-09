@@ -5,8 +5,8 @@ namespace FM.Application.Interfaces.ICommand
 {
     public interface IPostCommand
     {
-        Task CreatePostAsync(CreatePostCommandDTO command);
-        Task UpdatePostAsync(UpdatePostCommandDTO command);
-        Task DeletePostAsync(DeletePostCommandDTO command);
+       public Task CreatePostAsync(CreatePostCommandDTO command);
+       public Task UpdatePostAsync(UpdatePostCommandDTO command);
+       public Task DeletePostAsync(DeletePostCommandDTO command);
     }
 }

@@ -1,32 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FM.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 
-namespace FM.Domain.Entities
+public class Comment
 {
-    public class Comment
+    public int Id { get; set; }
+    public string Content { get; set; }
+    public DateTime CreatedAt { get; set; }
+
+    // Foreign key and navigation property for User
+    public string UserId { get; set; }
+    public User User { get; set; }
+
+    // Foreign key and navigation property for Post
+    public int PostId { get; set; }
+    public Post Post { get; set; }
+
+    [Timestamp]
+    public byte[] RowVersion { get; set; }
+
+    public Comment(string content, string userId, int postId)
     {
-        public int Id { get; protected set; } // Primary key
-        public string Content { get; protected set; }
-        public DateTime CreatedAt { get; protected set; }
-
-        // Foreign key and navigation property for Post
-        public int PostId { get; protected set; }
-        public Post Post { get; protected set; }
-
-        // Foreign key and navigation property for User
-        public string UserId { get; protected set; }
-        public User User { get; protected set; }
-
-        public byte[] RowVersion { get; protected set; }
-
-        public void UpdateContent(string content)
-        {
-            Content = content;
-        }
-
+        Content = content;
+        UserId = userId;
+        PostId = postId;
+        CreatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateContent(string content)
+    {
+        Content = content;
+    }
 }
