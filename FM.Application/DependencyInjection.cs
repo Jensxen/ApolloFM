@@ -11,7 +11,7 @@ namespace FM.Application
 {
     public static class ApplicationDependencyInjection
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services, bool isApiContext = false)
         {
             // Register the command interfaces
             services.AddScoped<ISubForumCommand, SubForumCommand>();
@@ -26,6 +26,12 @@ namespace FM.Application
 
             // Services
             services.AddScoped<SpotifyService>();
+            
+            if (!isApiContext)
+            {
+                services.AddScoped<AuthService>();
+            }
+
 
             return services;
         }

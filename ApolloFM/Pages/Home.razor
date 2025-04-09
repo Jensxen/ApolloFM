@@ -1,48 +1,245 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using FM.Application.Services
+@implements IDisposable
 @page "/"
 
-<h1>Welcome to ApolloFM</h1>
+<style>
+    .btn-spotify {
+        background-color: #1DB954;
+        border-color: #1DB954;
+        color: white;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+    }
+
+        .btn-spotify:hover {
+            background-color: #1ED760;
+            border-color: #1ED760;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+    .welcome-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+
+    .spinner-container {
+        display: flex;
+        justify-content: center;
+        margin: 2rem 0;
+    }
+
+    .page-title {
+        color: #333;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .user-display {
+        font-weight: 500;
+        color: #1DB954;
+    }
+</style>
+
+<h1 class="page-title">Welcome to ApolloFM</h1>
 <p>Connect your Spotify account and share your favorite songs!</p>
 
-@if (!isLoggedIn)
+@if (isLoading)
 {
-	<button class="btn btn-primary" @onclick="Login">Login with Spotify</button>
+    <div class="spinner-container">
+        <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!isLoggedIn)
+{
+    <button class="btn btn-spotify" @onclick="Login">
+        <i class="fab fa-spotify me-2"></i> Connect with Spotify
+    </button>
+
+    @if (authError)
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            <strong>Authentication Error:</strong> @errorMessage
+        </div>
+    }
 }
 else
 {
-	<p>Welcome back, @userName!</p>
-	<button class="btn btn-secondary" @onclick="Logout">Logout</button>
+    <div class="welcome-container">
+        <p>Welcome back, <strong class="user-display">@(string.IsNullOrEmpty(userName) ? "Spotify User" : userName)</strong>!</p>
+        <button class="btn btn-outline-secondary" @onclick="Logout">
+            <i class="fas fa-sign-out-alt me-1"></i> Logout
+        </button>
+    </div>
 }
 
 @code {
-	private bool isLoggedIn = false;
-	private string userName;
+    private bool isLoggedIn = false;
+    private string? userName;
+    private bool isLoading = true;
+    private bool authError = false;
+    private bool isUpdatingState = false;
+    private string errorMessage = "There was a problem authenticating with Spotify. Please try again.";
 
-	// Inject the AuthenticationStateProvider
-	@inject AuthenticationStateProvider AuthenticationStateProvider
-	@inject NavigationManager Navigation
+    [Inject] private AuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
 
-	protected override async Task OnInitializedAsync()
-	{
-		// Check if the user is authenticated
-		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-		var user = authState.User;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Set a timeout to prevent infinite loading
+            var timeoutTask = Task.Delay(10000); // 10 second timeout
+            var authTask = CheckAuthenticationAsync();
 
-		if (user.Identity != null && user.Identity.IsAuthenticated)
-		{
-			isLoggedIn = true;
-			userName = user.Identity.Name ?? "Spotify User";
-		}
-	}
+            var completedTask = await Task.WhenAny(authTask, timeoutTask);
+            if (completedTask == timeoutTask && !authTask.IsCompleted)
+            {
+                Console.WriteLine("Authentication check timed out");
+                errorMessage = "Authentication check timed out. Please try again.";
+                authError = true;
+            }
+            else if (authTask.IsFaulted)
+            {
+                var exception = authTask.Exception?.InnerException ?? authTask.Exception;
+                Console.WriteLine($"Auth task failed: {exception?.Message}");
+                errorMessage = "Authentication process failed. Please try again.";
+                authError = true;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 
-	private void Login()
-	{
-		Navigation.NavigateTo("authentication/login");
-	}
+    private async Task CheckAuthenticationAsync()
+    {
+        try
+        {
+            isLoggedIn = await AuthService.IsUserAuthenticated();
+            if (isLoggedIn)
+            {
+                var profile = await AuthService.GetUserProfile();
+                userName = profile?.DisplayName;
+                if (string.IsNullOrEmpty(userName))
+                {
+                    userName = "Spotify User";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Auth check error: {ex.Message}");
+            errorMessage = $"Error checking authentication: {ex.Message}";
+            authError = true;
+            throw; // Re-throw to be caught by the calling method
+        }
+    }
 
-	private async Task Logout()
-	{
-		await AuthenticationStateProvider.GetAuthenticationStateAsync();
-		Navigation.NavigateTo("authentication/logout");
-	}
+    private void Login()
+    {
+        try
+        {
+            // Get API URL from configuration or use the default
+            var apiUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7043";
+            var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
+
+            Navigation.NavigateTo($"{apiUrl}/api/auth/login?returnUrl={returnUrl}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Login error: {ex.Message}");
+            errorMessage = $"Error initiating login: {ex.Message}";
+            authError = true;
+            StateHasChanged();
+        }
+    }
+
+    private void Logout()
+    {
+        try
+        {
+            AuthService.Logout();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout error: {ex.Message}");
+            errorMessage = $"Error during logout: {ex.Message}";
+            authError = true;
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        AuthStateProvider.AuthenticationStateChanged += AuthenticationStateChangedHandler;
+    }
+
+    private async void AuthenticationStateChangedHandler(Task<AuthenticationState> task)
+    {
+        // Prevent multiple concurrent updates
+        if (isUpdatingState)
+            return;
+
+        isUpdatingState = true;
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                try
+                {
+                    var authState = await task;
+                    var newIsLoggedIn = authState.User.Identity?.IsAuthenticated ?? false;
+
+                    // Only update if state changed to avoid loops
+                    if (newIsLoggedIn != isLoggedIn)
+                    {
+                        isLoggedIn = newIsLoggedIn;
+
+                        if (isLoggedIn)
+                        {
+                            var profile = await AuthService.GetUserProfile();
+                            userName = profile?.DisplayName;
+                        }
+                        else
+                        {
+                            userName = null;
+                        }
+
+                        StateHasChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Auth state handler error: {ex.Message}");
+                    errorMessage = $"Authentication state error: {ex.Message}";
+                    authError = true;
+                    StateHasChanged();
+                }
+            });
+        }
+        finally
+        {
+            isUpdatingState = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= AuthenticationStateChangedHandler;
+    }
 }

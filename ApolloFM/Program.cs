@@ -1,8 +1,8 @@
 using ApolloFM;
-using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using FM.Application;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -28,12 +28,11 @@ builder.Services.AddOidcAuthentication(options =>
 });
 
 
+// In Blazor WebAssembly Program.cs
+builder.Services.AddApplicationServices(); // Default is false
+
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
-// Add your DbContext
-builder.Services.AddDbContext<ApolloContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Build the host
 var host = builder.Build();

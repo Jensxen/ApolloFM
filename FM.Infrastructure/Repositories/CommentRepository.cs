@@ -1,5 +1,6 @@
 ﻿using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
+using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
@@ -7,9 +8,9 @@ namespace FM.Infrastructure.Repositories
 {
     public class CommentRepository : ICommentRepository
     {
-        private readonly DbContext _dbContext;
+        private readonly ApolloContext _dbContext;
 
-        public CommentRepository(DbContext dbContext)
+        public CommentRepository(ApolloContext dbContext)
         {
             _dbContext = dbContext;
         }

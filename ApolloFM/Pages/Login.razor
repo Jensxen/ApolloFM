@@ -1,0 +1,84 @@
+﻿@page "/login"
+@using FM.Application.Services
+@using Microsoft.AspNetCore.WebUtilities
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<h3>Login with Spotify</h3>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    Connect with Spotify
+                </div>
+                <div class="card-body text-center">
+                    <p>Connect your Spotify account to share and discover music with others!</p>
+
+                    <button class="btn btn-success btn-lg" @onclick="LoginWithSpotify">
+                        <i class="fab fa-spotify me-2"></i> Connect with Spotify
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">
+                            @errorMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            // Check if there's an error parameter in the URL
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+
+            if (query.TryGetValue("error", out var error))
+            {
+                errorMessage = error;
+            }
+            else if (query.TryGetValue("authentication_failed", out var authFailed))
+            {
+                errorMessage = "Authentication failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing URL: {ex.Message}");
+        }
+    }
+
+    private void LoginWithSpotify()
+    {
+        try
+        {
+            // Get current URL to use as return URL - use the base URI for the app
+            var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
+
+            // Your API URL - replace with your actual API URL
+            var apiUrl = "https://localhost:7000"; // Update this to match your API URL
+
+            // The full URL to return to after authentication
+            var callbackUri = Uri.EscapeDataString($"{Navigation.BaseUri}authentication/login-callback");
+
+            // Redirect to the API's login endpoint
+            Navigation.NavigateTo($"{apiUrl}/api/auth/login?returnUrl={callbackUri}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error initiating login: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}
+
