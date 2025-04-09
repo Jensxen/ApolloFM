@@ -18,6 +18,7 @@ public class Comment
     [Timestamp]
     public byte[] RowVersion { get; set; }
 
+    public Comment() { } // Parameterless constructor for EF Core
     public Comment(string content, string userId, int postId)
     {
         Content = content;

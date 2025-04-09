@@ -29,6 +29,7 @@ namespace FM.Domain.Entities
         [Timestamp]
         public byte[] RowVersion { get; protected set; }
 
+        public Post() { } // Parameterless constructor for EF Core
         public Post(string title, string content, string spotifyPlaylistId, string userId, int subForumId)
         {
             Title = title;

@@ -13,6 +13,7 @@ namespace FM.Domain.Entities
         [Timestamp]
         public byte[] RowVersion { get; protected set; }
 
+        public Permission() { }
         public void UpdateName(string name)
         {
             Name = name;

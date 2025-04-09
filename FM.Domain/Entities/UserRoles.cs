@@ -17,6 +17,7 @@ namespace FM.Domain.Entities
         [Timestamp]
         public byte[] RowVersion { get; protected set; }
 
+        public UserRole() { }
         public void UpdateName(string name)
         {
             Name = name;

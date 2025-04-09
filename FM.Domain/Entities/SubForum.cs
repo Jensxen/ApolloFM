@@ -17,6 +17,8 @@ namespace FM.Domain.Entities
         [Timestamp]
         public byte[] RowVersion { get; protected set; }
 
+        public SubForum() { }
+
         public SubForum(string name, string description)
         {
             Name = name;

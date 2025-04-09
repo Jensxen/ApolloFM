@@ -21,7 +21,12 @@ namespace FM.Domain.Entities
         public byte[] RowVersion { get; protected set; }
 
 
-        protected User() { }
+        //protected User() { }
+
+        public User()
+        {
+
+        }
 
         // Constructor to set initial values including Id
         public User(string id, string displayName, string spotifyUserId, int userRoleId)
