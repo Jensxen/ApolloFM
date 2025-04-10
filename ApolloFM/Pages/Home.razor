@@ -145,7 +145,7 @@ else
             Console.WriteLine($"Auth check error: {ex.Message}");
             errorMessage = $"Error checking authentication: {ex.Message}";
             authError = true;
-            throw; // Re-throw to be caught by the calling method
+            throw; 
         }
     }
 
@@ -153,7 +153,7 @@ else
     {
         try
         {
-            // Get API URL from configuration or use the default
+            // API fra Config
             var apiUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7043";
             var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
 
@@ -190,7 +190,7 @@ else
 
     private async void AuthenticationStateChangedHandler(Task<AuthenticationState> task)
     {
-        // Prevent multiple concurrent updates
+        // Concurrency
         if (isUpdatingState)
             return;
 
@@ -205,7 +205,6 @@ else
                     var authState = await task;
                     var newIsLoggedIn = authState.User.Identity?.IsAuthenticated ?? false;
 
-                    // Only update if state changed to avoid loops
                     if (newIsLoggedIn != isLoggedIn)
                     {
                         isLoggedIn = newIsLoggedIn;

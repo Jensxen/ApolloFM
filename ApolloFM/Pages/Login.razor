@@ -39,7 +39,7 @@
     {
         try
         {
-            // Check if there's an error parameter in the URL
+            
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
             var query = QueryHelpers.ParseQuery(uri.Query);
 
@@ -62,16 +62,12 @@
     {
         try
         {
-            // Get current URL to use as return URL - use the base URI for the app
             var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
 
-            // Your API URL - replace with your actual API URL
-            var apiUrl = "https://localhost:7000"; // Update this to match your API URL
+            var apiUrl = "https://localhost:7000";
 
-            // The full URL to return to after authentication
             var callbackUri = Uri.EscapeDataString($"{Navigation.BaseUri}authentication/login-callback");
 
-            // Redirect to the API's login endpoint
             Navigation.NavigateTo($"{apiUrl}/api/auth/login?returnUrl={callbackUri}", forceLoad: true);
         }
         catch (Exception ex)

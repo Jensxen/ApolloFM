@@ -13,7 +13,7 @@ namespace FM.Application.Services
         private readonly NavigationManager _navigationManager;
         private readonly bool _isBlazorContext;
 
-        // Constructor for Blazor WebAssembly client
+        // Blazor WebAssembly client constructor
         public AuthService(
             HttpClient httpClient, 
             AuthenticationStateProvider authStateProvider, 
@@ -25,7 +25,7 @@ namespace FM.Application.Services
             _isBlazorContext = true;
         }
 
-        // Constructor for API project
+        // API Constructor
         public AuthService(HttpClient httpClient)
         {
             _httpClient = httpClient;

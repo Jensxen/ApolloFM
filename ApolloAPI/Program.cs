@@ -24,14 +24,12 @@ builder.Services.AddAuthentication(options =>
 .AddCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.None; // Required for cross-site cookies
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Requires HTTPS
+    options.Cookie.SameSite = SameSiteMode.None; //cross-site cookies
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
-    // Set a reasonable expiration time
     options.ExpireTimeSpan = TimeSpan.FromHours(12);
     options.SlidingExpiration = true;
 
-    // Configure the login path and access denied path
     options.LoginPath = "/api/auth/login";
     options.AccessDeniedPath = "/api/auth/access-denied";
 })
@@ -39,7 +37,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.ClientId = builder.Configuration["Spotify:ClientId"];
     options.ClientSecret = builder.Configuration["Spotify:ClientSecret"];
-    options.CallbackPath = "/api/auth/callback"; // Update to match controller route
+    options.CallbackPath = "/api/auth/callback"; 
 
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
@@ -95,25 +93,21 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("https://localhost:7210")  // Your Blazor app URL
+        policy.WithOrigins("https://localhost:7210")  
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials()
-              .WithExposedHeaders("Set-Cookie"); // Explicitly allow Cookie headers
+              .WithExposedHeaders("Set-Cookie"); 
     });
 });
 
 
-
-// Register infrastructure services
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Register application services
 builder.Services.AddApplicationServices(isApiContext: true);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

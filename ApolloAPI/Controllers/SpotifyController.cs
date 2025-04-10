@@ -21,7 +21,7 @@ public class AuthController : ControllerBase
     {
         _logger.LogInformation("Login attempt with return URL: {ReturnUrl}", returnUrl);
         
-        // Validate the return URL (to prevent open redirect attacks)
+        // Open Redirct Attacks
         if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) &&
             !returnUrl.StartsWith("/"))
         {
@@ -29,7 +29,7 @@ public class AuthController : ControllerBase
             returnUrl = "/";
         }
 
-        // Generate a random state parameter to prevent CSRF
+        //CSRF
         var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         
         return Challenge(new AuthenticationProperties
@@ -48,10 +48,8 @@ public class AuthController : ControllerBase
     {
         _logger.LogInformation("Authentication callback received");
         
-        // This method will be called by Spotify after user authentication
         try
         {
-            // Get the authentication result from Spotify
             var result = await HttpContext.AuthenticateAsync(SpotifyAuthenticationDefaults.AuthenticationScheme);
             
             if (!result.Succeeded)
@@ -60,11 +58,9 @@ public class AuthController : ControllerBase
                 return Redirect("/?error=authentication_failed");
             }
             
-            // Get the return URL from the authentication properties
             var returnUrl = result.Properties?.Items["returnUrl"] ?? "/";
             _logger.LogInformation("Authentication successful, redirecting to {ReturnUrl}", returnUrl);
             
-            // Complete the authentication by signing in
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 result.Principal,
@@ -75,7 +71,6 @@ public class AuthController : ControllerBase
                 }
             );
             
-            // Redirect back to the client application
             return Redirect(returnUrl);
         }
         catch (Exception ex)
@@ -90,7 +85,6 @@ public class AuthController : ControllerBase
     {
         _logger.LogInformation("Logout request received");
         
-        // Validate the return URL (to prevent open redirect attacks)
         if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) &&
             !returnUrl.StartsWith("/"))
         {
@@ -121,7 +115,6 @@ public class AuthController : ControllerBase
 
         try
         {
-            // Use the token to get user info from Spotify
             var config = SpotifyClientConfig.CreateDefault().WithToken(token);
             var spotify = new SpotifyClient(config);
             var user = await spotify.UserProfile.Current();
