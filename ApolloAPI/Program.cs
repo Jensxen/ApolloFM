@@ -7,6 +7,7 @@ using AspNet.Security.OAuth.Spotify;
 using Microsoft.EntityFrameworkCore;
 using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using FM.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,10 +39,13 @@ builder.Services.AddAuthentication(options =>
     options.ClientId = builder.Configuration["Spotify:ClientId"];
     options.ClientSecret = builder.Configuration["Spotify:ClientSecret"];
     options.CallbackPath = "/api/auth/callback"; 
+    options.Scope.Add("user-top-read");
 
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
     options.Scope.Add("playlist-read-private");
+    options.Scope.Add("user-read-playback-state");
+    options.Scope.Add("user-read-currently-playing");
 
     options.SaveTokens = true;
 
@@ -84,7 +88,7 @@ builder.Services.AddDbContext<ApolloContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register HttpClient for SpotifyService
-builder.Services.AddHttpClient<FM.Application.Services.SpotifyService>(client =>
+builder.Services.AddHttpClient<SpotifyService>(client =>
 {
     client.BaseAddress = new Uri("https://api.spotify.com/v1/");
 });
