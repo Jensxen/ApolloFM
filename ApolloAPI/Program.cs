@@ -142,15 +142,13 @@ builder.Services.AddHttpClient<SpotifyService>(client =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddDefaultPolicy(
+        policy =>
     {
-        options.AddPolicy("AllowBlazorOrigin",
-            policy => policy
-              .WithOrigins("https://localhost:7210")
+              policy.WithOrigins("https://localhost:7210")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials()
-              .WithExposedHeaders("Set-Cookie"));
+              .AllowCredentials();
     });
 });
 
@@ -177,7 +175,6 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 app.UseCors();
-app.UseCors("AllowBlazorOrigin");
 app.UseCookiePolicy();
 app.UseSession();
 app.UseAuthentication();
