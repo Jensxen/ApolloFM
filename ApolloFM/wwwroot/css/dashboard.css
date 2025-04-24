@@ -1,0 +1,161 @@
+﻿/* Make sure the root HTML and body elements have full height */
+html, body, #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Dashboard container should take full width and height */
+.dashboard-container {
+    min-height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    background-color: #212121;
+    color: white;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Sidebar should have a fixed width */
+.sidebar {
+    width: 250px;
+    min-width: 250px;
+    background-color: #191414;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content should take remaining width */
+.main-content {
+    flex: 1;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Content body should take the remaining height */
+.content-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* For tablet-sized screens */
+@media (max-width: 992px) {
+    .dashboard-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        min-height: auto;
+    }
+
+    .nav-menu {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .nav-item {
+        min-width: 150px;
+        text-align: center;
+    }
+
+    .main-content {
+        height: calc(100vh - 120px); /* Adjust based on sidebar height */
+    }
+}
+
+/* For mobile-sized screens */
+@media (max-width: 576px) {
+    .track-card {
+        margin-bottom: 15px;
+    }
+
+    .now-playing-card {
+        flex-direction: column;
+    }
+
+    .album-art.large {
+        width: 100%;
+        height: auto;
+    }
+}
+
+.tracks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.time-range-selector {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 20px 0;
+}
+
+    .time-range-selector button {
+        background-color: transparent;
+        border: 1px solid #444;
+        color: #ccc;
+        padding: 8px 16px;
+        margin: 0 5px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .time-range-selector button.active {
+            background-color: #1DB954;
+            border-color: #1DB954;
+            color: white;
+        }
+
+        .time-range-selector button:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+.dashboard-btn {
+    background-color: #1DB954;
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-right: 10px;
+    margin-bottom: 15px;
+}
+
+    .dashboard-btn:hover {
+        background-color: #1ED760;
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+@media (max-width: 768px) {
+    .time-range-selector button {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+
+    .content-header h1 {
+        font-size: 1.6rem;
+    }
+}

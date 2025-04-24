@@ -6,12 +6,18 @@ using FM.Application.Query;
 using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
 using FM.Application.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Authentication;
 
 namespace FM.Application
 {
     public static class ApplicationDependencyInjection
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services, bool isApiContext = false)
+        public static IServiceCollection AddApplicationServices(
+        this IServiceCollection services,
+        bool isApiContext = false,
+        bool registerAuthenticationProvider = true)
         {
             // Register the command interfaces
             services.AddScoped<ISubForumCommand, SubForumCommand>();
@@ -24,14 +30,21 @@ namespace FM.Application
             services.AddScoped<IPostQuery, PostQuery>();
             services.AddScoped<IUserQuery, UserQuery>();
 
+           
             // Services
             services.AddScoped<SpotifyService>();
-            
+
             if (!isApiContext)
             {
-                services.AddScoped<AuthService>();
-            }
+                services.AddBlazoredLocalStorage();
 
+                if (registerAuthenticationProvider)
+                {
+                    services.AddScoped<SpotifyAuthenticationStateProvider>();
+                    services.AddScoped<AuthenticationStateProvider>(provider =>
+                        provider.GetRequiredService<SpotifyAuthenticationStateProvider>());
+                }
+            }
 
             return services;
         }

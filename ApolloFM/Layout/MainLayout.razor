@@ -1,16 +1,18 @@
 ﻿@inherits LayoutComponentBase
+
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
+        <ErrorBoundary>
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent Context="exception">
+                <div class="error-container">
+                    <h1>Error</h1>
+                    <p>An error has occurred while loading this component:</p>
+                    <p>@exception.Message</p>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </main>
 </div>

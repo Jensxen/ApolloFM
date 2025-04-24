@@ -39,7 +39,6 @@
     {
         try
         {
-            
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
             var query = QueryHelpers.ParseQuery(uri.Query);
 
@@ -62,19 +61,25 @@
     {
         try
         {
-            var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
+            Console.WriteLine("Login: Starting Spotify login process");
 
-            var apiUrl = "https://localhost:7000";
+            // API URL should match what's used in Home.razor
+            var apiUrl = "https://localhost:7043";
 
-            var callbackUri = Uri.EscapeDataString($"{Navigation.BaseUri}authentication/login-callback");
+            // The URL to return to after authentication
+            var returnUrl = Uri.EscapeDataString($"{Navigation.BaseUri}dashboard");
 
-            Navigation.NavigateTo($"{apiUrl}/api/auth/login?returnUrl={callbackUri}", forceLoad: true);
+            // Navigate to the login endpoint
+            var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={returnUrl}";
+            Console.WriteLine($"Login: Navigating to {loginUrl}");
+
+            Navigation.NavigateTo(loginUrl, forceLoad: true);
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Error in LoginWithSpotify: {ex.Message}");
             errorMessage = $"Error initiating login: {ex.Message}";
             StateHasChanged();
         }
     }
 }
-

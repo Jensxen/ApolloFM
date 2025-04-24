@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using FM.Application.Services;
+using Microsoft.AspNetCore.Session;
+using Microsoft.AspNetCore.Authentication;
+using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+
+
+
+builder.Services.AddDistributedMemoryCache(); // Kræves til sessionstorage
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(60); // Hvor længe en sessions varer
+    options.Cookie.HttpOnly = true; // God sikkerhedspraksis
+    options.Cookie.IsEssential = true; // Markerer cookie som essentiel for GDPR
+    options.Cookie.SameSite = SameSiteMode.None; // For cross-origin requests
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Brug kun over HTTPS
+});
+
+
+
 
 // Single authentication configuration
 builder.Services.AddAuthentication(options =>
@@ -34,33 +53,55 @@ builder.Services.AddAuthentication(options =>
     options.LoginPath = "/api/auth/login";
     options.AccessDeniedPath = "/api/auth/access-denied";
 })
+
 .AddSpotify(options =>
 {
     options.ClientId = builder.Configuration["Spotify:ClientId"];
     options.ClientSecret = builder.Configuration["Spotify:ClientSecret"];
-    options.CallbackPath = "/api/auth/callback"; 
-    options.Scope.Add("user-top-read");
+    options.SaveTokens = true;
+    options.CallbackPath = "/api/auth/callback";
 
+    // Scope konfiguration
+    options.Scope.Add("user-top-read");
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
     options.Scope.Add("playlist-read-private");
     options.Scope.Add("user-read-playback-state");
     options.Scope.Add("user-read-currently-playing");
 
-    options.SaveTokens = true;
-
-    // Add events to handle the authentication flow
+    // Correlation Cookie konfiguration
+    options.CorrelationCookie = new CookieBuilder
+    {
+        HttpOnly = true,
+        SameSite = SameSiteMode.None,
+        SecurePolicy = CookieSecurePolicy.Always,
+        IsEssential = true
+    };
     options.Events = new OAuthEvents
     {
-        OnCreatingTicket = context =>
+        OnRemoteFailure = context =>
         {
-            // Log successful authentication
-            Console.WriteLine($"Creating ticket for user: {context.Identity.Name}");
+            Console.WriteLine($"OAuth Remote Failure: {context.Failure?.Message}");
+
+            // Hvis der er en state-fejl, log den og fortsæt
+            if (context.Failure?.Message?.Contains("oauth state") == true)
+            {
+                Console.WriteLine("OAuth State error detected, continuing with authentication");
+                context.HandleResponse();
+                context.Response.Redirect("/api/auth/handle-state-error");
+                return Task.CompletedTask;
+            }
+
             return Task.CompletedTask;
         },
         OnTicketReceived = context =>
         {
-            // You can customize the ticket if needed
+            Console.WriteLine("OAuth ticket received successfully!");
+            return Task.CompletedTask;
+        },
+        OnCreatingTicket = context =>
+        {
+            Console.WriteLine($"Creating OAuth ticket for user: {context.Identity?.Name ?? "Unknown"}");
             return Task.CompletedTask;
         },
         OnRedirectToAuthorizationEndpoint = context =>
@@ -81,6 +122,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.PostConfigure<OAuthOptions>(SpotifyAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    var provider = builder.Services.BuildServiceProvider();
+    options.StateDataFormat = provider.GetRequiredService<ISecureDataFormat<AuthenticationProperties>>();
+});
+
 builder.Services.AddAuthorization();
 
 // Register DbContext
@@ -97,11 +144,13 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("https://localhost:7210")  
+        options.AddPolicy("AllowBlazorOrigin",
+            policy => policy
+              .WithOrigins("https://localhost:7210")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials()
-              .WithExposedHeaders("Set-Cookie"); 
+              .WithExposedHeaders("Set-Cookie"));
     });
 });
 
@@ -109,6 +158,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddApplicationServices(isApiContext: true);
+
+
+builder.Services.AddDataProtection();
+builder.Services.AddScoped<ISecureDataFormat<AuthenticationProperties>, CustomSecureDataFormat>();
 
 var app = builder.Build();
 
@@ -121,9 +174,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors();
 
+app.UseRouting();
+app.UseCors();
+app.UseCors("AllowBlazorOrigin");
 app.UseCookiePolicy();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
