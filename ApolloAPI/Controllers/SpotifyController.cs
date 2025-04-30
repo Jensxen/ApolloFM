@@ -195,79 +195,86 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpGet("handle-state-error")]
-    public async Task<IActionResult> HandleStateError()
+[HttpGet("handle-state-error")]
+public async Task<IActionResult> HandleStateError()
+{
+    _logger.LogInformation("Handling OAuth state error - attempting to recover authentication");
+
+    try
     {
-        _logger.LogInformation("Handling OAuth state error - attempting to recover authentication");
-
-        try
+        var code = Request.Query["code"].FirstOrDefault();
+        if (string.IsNullOrEmpty(code))
         {
-            // Log all query parameters for debugging
-            foreach (var key in Request.Query.Keys)
-            {
-                _logger.LogInformation($"Query parameter: {key} = {Request.Query[key]}");
-            }
-
-            // Få fat i authorization code fra URL'en
-            var code = Request.Query["code"].FirstOrDefault();
-            if (string.IsNullOrEmpty(code))
-            {
-                _logger.LogError("No authorization code found in request");
-                return Redirect("/?error=no_auth_code");
-            }
-
-            // Få clientId og clientSecret fra konfiguration
-            var clientId = _configuration["Spotify:ClientId"];
-            var clientSecret = _configuration["Spotify:ClientSecret"];
-
-            _logger.LogInformation($"Using Client ID: {clientId?.Substring(0, 4)}... and Secret: {clientSecret != null}");
-
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-            {
-                _logger.LogError("Missing client ID or secret");
-                return Redirect("/?error=configuration_error");
-            }
-
-            // Manuelt gennemfør token udvekslingen
-            var tokenResponse = await ExchangeCodeForTokenAsync(code, clientId, clientSecret);
-
-            if (tokenResponse == null)
-            {
-                _logger.LogError("Token response is null");
-                return Redirect("/?error=null_token_response");
-            }
-
-            if (string.IsNullOrEmpty(tokenResponse.AccessToken))
-            {
-                _logger.LogError("Access token is empty in response");
-                return Redirect("/?error=empty_token");
-            }
-
-            _logger.LogInformation($"Successfully exchanged code for token: {tokenResponse.AccessToken.Substring(0, 10)}...");
-
-            // Redirect til authentication/login-callback på klientsiden med tokenet
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var redirectUrl = $"{baseUrl}/authentication/login-callback?access_token={Uri.EscapeDataString(tokenResponse.AccessToken)}";
-
-            _logger.LogInformation($"Redirecting to: {redirectUrl}");
-            return Redirect(redirectUrl);
+            _logger.LogError("No authorization code found in request");
+            return BadRequest(new { error = "no_auth_code" });
         }
-        catch (Exception ex)
+
+        var clientId = _configuration["Spotify:ClientId"];
+        var clientSecret = _configuration["Spotify:ClientSecret"];
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/handle-state-error";
+
+        var tokenResponse = await ExchangeCodeForTokenAsync(code, clientId, clientSecret, redirectUri);
+
+        if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
         {
-            _logger.LogError(ex, "Error in HandleStateError");
-            return Redirect("/?error=state_handling_error");
+            _logger.LogError("Failed to exchange code for token");
+            return BadRequest(new { error = "token_exchange_failed" });
         }
+
+        _logger.LogInformation("Successfully exchanged code for token");
+
+        // HTML med sessionStorage gemning og redirect
+        var safeAccessToken = tokenResponse.AccessToken.Replace("'", "\\'");
+        var safeRefreshToken = tokenResponse.RefreshToken?.Replace("'", "\\'");
+        var expiresIn = tokenResponse.ExpiresIn;
+
+        var html = $@"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Storing Token...</title>
+            <script>
+                // Gem tokens i sessionStorage
+                sessionStorage.setItem('spotify_access_token', '{safeAccessToken}');
+                sessionStorage.setItem('spotify_refresh_token', '{safeRefreshToken}');
+                sessionStorage.setItem('spotify_expires_in', '{expiresIn}');
+
+                console.log('Tokens stored in sessionStorage');
+
+                // Redirect til Blazor dashboard
+                window.location.href = 'https://localhost:7210/dashboard';
+            </script>
+        </head>
+        <body>
+            <h3>Authentication successful!</h3>
+            <p>Storing tokens and redirecting to dashboard...</p>
+        </body>
+        </html>";
+
+        _logger.LogInformation("Returning HTML to store token and redirect");
+        return Content(html, "text/html");
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in HandleStateError");
+        return StatusCode(500, new { error = "unexpected_error", message = ex.Message });
+    }
+}
 
-    // Hjælpemetode til at udveksle kode for token
-    private async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(string code, string clientId, string clientSecret)
+    // Opdateret hjælpemetode til at udveksle kode for token med custom redirectUri
+    private async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(string code, string clientId, string clientSecret, string redirectUri = null)
     {
         try
         {
-            _logger.LogInformation("Exchanging code for token");
+            _logger.LogInformation($"Exchanging code for token. Code starts with: {code.Substring(0, Math.Min(10, code.Length))}...");
 
-            // Forbered redirect URI - skal matche det, der bruges til login
-            var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
+            // Hvis redirectUri ikke er givet, brug standardværdi
+            if (string.IsNullOrEmpty(redirectUri))
+            {
+                redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
+            }
+
+            _logger.LogInformation($"Using redirect URI: {redirectUri}");
 
             // Opbyg token request
             using var httpClient = new HttpClient();
@@ -290,6 +297,10 @@ public class AuthController : ControllerBase
             var response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
+            // Log svarindhold uanset om det lykkedes eller ej
+            _logger.LogInformation($"Spotify API response status: {response.StatusCode}");
+            _logger.LogInformation($"Spotify API response content: {responseContent}");
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError($"Token exchange failed: {response.StatusCode}, {responseContent}");
@@ -300,7 +311,14 @@ public class AuthController : ControllerBase
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var tokenResponse = JsonSerializer.Deserialize<SpotifyTokenResponse>(responseContent, options);
 
-            _logger.LogInformation("Successfully deserialized token response");
+            if (tokenResponse != null)
+            {
+                _logger.LogInformation($"Successfully deserialized token response. Token length: {tokenResponse.AccessToken?.Length ?? 0}");
+            }
+            else
+            {
+                _logger.LogError("Token response deserialized to null");
+            }
 
             return tokenResponse;
         }
@@ -310,6 +328,7 @@ public class AuthController : ControllerBase
             return null;
         }
     }
+
 
     // Hjælpeklasse til token response
     private class SpotifyTokenResponse

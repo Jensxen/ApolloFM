@@ -2,6 +2,8 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using FM.Application.Services
 @using Blazored.LocalStorage
+@using Microsoft.JSInterop
+@using System.Text.Json
 @implements IDisposable
 @inject AuthService AuthService
 @inject NavigationManager Navigation
@@ -68,16 +70,16 @@
 		{
 			Console.WriteLine("Home: OnInitializedAsync started");
 
-			// First check if we have a token in localStorage
+			// First check if we have a token in sessionStorage
 			string token = null;
 
 			try
 			{
-				token = await LocalStorage.GetItemAsync<string>("spotify_access_token");
+				token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "spotify_access_token");
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error reading from localStorage: {ex.Message}");
+				Console.WriteLine($"Error reading from sessionStorage: {ex.Message}");
 			}
 
 			if (!string.IsNullOrEmpty(token))
@@ -146,23 +148,93 @@
 		}
 	}
 
-	private void Login()
+
+	private async Task Login()
 	{
 		try
 		{
+			// DIREKTE IMPLEMENTERING - MEGET SIMPEL TILGANG
+			Console.WriteLine("Attempting direct login with simplified approach");
+
+			// API URL
 			var apiUrl = "https://localhost:7043";
-			// Brug handle-state-error i stedet for normal login flow
-			Navigation.NavigateTo($"{apiUrl}/api/auth/handle-state-error", forceLoad: true);
+
+			// Redirect direkte til Spotify auth URL
+			var clientId = "824cb0e5e1d549c683c642d9c9ae062b"; // Dit client ID
+			var redirectUri = $"{apiUrl}/api/auth/handle-state-error";
+			var scopes = "user-read-email user-read-private user-top-read user-read-currently-playing";
+
+			var spotifyUrl = $"https://accounts.spotify.com/authorize" +
+								$"?client_id={Uri.EscapeDataString(clientId)}" +
+								$"&response_type=code" +
+								$"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+								$"&scope={Uri.EscapeDataString(scopes)}";
+
+			Console.WriteLine($"Direct Spotify Auth URL: {spotifyUrl}");
+			await JSRuntime.InvokeVoidAsync("console.log", "Navigating directly to Spotify auth:", spotifyUrl);
+
+			Navigation.NavigateTo(spotifyUrl, forceLoad: true);
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Error during login navigation: {ex.Message}");
+			Console.WriteLine($"Error during login: {ex.Message}");
+			await JSRuntime.InvokeVoidAsync("console.error", "Login error:", ex.Message);
 			authError = true;
 			errorMessage = "Error during login. Please try again.";
 			StateHasChanged();
 		}
 	}
 
+	private async Task HandleSpotifyCallback(string code)
+	{
+		try
+		{
+			Console.WriteLine("Handling Spotify callback with code: " + code);
+
+			// API URL
+			var apiUrl = "https://localhost:7043/api/auth/handle-state-error";
+
+			// Send kode til API for at få token
+			var response = await JSRuntime.InvokeAsync<string>("fetch", $"{apiUrl}?code={Uri.EscapeDataString(code)}");
+			var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			if (!string.IsNullOrEmpty(tokenResponse?.AccessToken))
+			{
+				// Gem token i localStorage
+				await LocalStorage.SetItemAsync("spotify_access_token", tokenResponse.AccessToken);
+				Console.WriteLine("Token stored in localStorage");
+
+				// Opdater authentication state
+				if (AuthStateProvider is SpotifyAuthenticationStateProvider spotifyAuth)
+				{
+					await spotifyAuth.MarkUserAsAuthenticated(tokenResponse.AccessToken);
+					Console.WriteLine("Authentication state updated");
+				}
+
+				// Naviger til dashboard
+				Navigation.NavigateTo("/dashboard");
+			}
+			else
+			{
+				Console.WriteLine("Failed to retrieve token from API");
+				authError = true;
+				errorMessage = "Failed to retrieve token from API";
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error handling Spotify callback: {ex.Message}");
+			authError = true;
+			errorMessage = "Error during authentication. Please try again.";
+		}
+	}
+
+	private class TokenResponse
+	{
+		public string AccessToken { get; set; }
+		public string RefreshToken { get; set; }
+		public int ExpiresIn { get; set; }
+	}
 
 	private void GoToDashboard()
 	{
@@ -215,6 +287,8 @@
 			Console.WriteLine($"Error in AuthenticationStateChangedHandler: {ex.Message}");
 		}
 	}
+
+
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{

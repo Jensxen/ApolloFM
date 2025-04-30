@@ -121,7 +121,7 @@ namespace FM.Application.Services
             if (!_isBlazorContext)
                 return;
 
-            
+
             var token = await _localStorage.GetItemAsync<string>("spotify_access_token");
 
             if (string.IsNullOrEmpty(token))
@@ -133,5 +133,30 @@ namespace FM.Application.Services
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
+
+        // I FM.Application/Services/AuthService.cs
+        public void Login(NavigationManager navigationManager, bool useDirectMethod = false)
+        {
+            var apiUrl = "https://localhost:7043"; // Kan evt. gemmes i konfiguration
+            var returnUrl = Uri.EscapeDataString($"{navigationManager.BaseUri}dashboard");
+
+            string loginUrl;
+            if (useDirectMethod)
+            {
+                // Brug den direkte metode, der virker via handle-state-error
+                loginUrl = $"{apiUrl}/api/auth/handle-state-error";
+                Console.WriteLine($"AuthService: Using direct login with handle-state-error");
+            }
+            else
+            {
+                // Brug standard OAuth flow
+                loginUrl = $"{apiUrl}/api/auth/login?returnUrl={returnUrl}";
+                Console.WriteLine($"AuthService: Using standard login flow with returnUrl: {returnUrl}");
+            }
+
+            Console.WriteLine($"AuthService: Navigating to {loginUrl}");
+            navigationManager.NavigateTo(loginUrl, forceLoad: true);
+        }
+
     }
 }

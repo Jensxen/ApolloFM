@@ -1,4 +1,4 @@
-﻿@page "/auth-test"
+﻿@* @page "/auth-test"
 @using Blazored.LocalStorage
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Authorization
@@ -196,7 +196,7 @@
             AddDebugInfo("Testing AuthProvider...");
 
             if (AuthStateProvider is FM.Application.Services.SpotifyAuthenticationStateProvider spotifyAuth)
-            {
+            {js
                 var testToken = "auth_test_token_" + Guid.NewGuid().ToString();
 
                 // Set token in localStorage first
@@ -263,3 +263,4 @@
     }
 }
 
+ *@

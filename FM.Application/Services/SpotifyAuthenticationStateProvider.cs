@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using FM.Application.Services;
 
 namespace FM.Application.Services
 {
@@ -16,6 +17,8 @@ namespace FM.Application.Services
             _localStorage = localStorage;
             _navigationManager = navigationManager;
             Console.WriteLine("SpotifyAuthenticationStateProvider instantiated");
+
+            AuthHelpers.Initialize(this);
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -98,6 +101,17 @@ namespace FM.Application.Services
             {
                 Console.WriteLine($"SpotifyAuthenticationStateProvider error in MarkUserAsLoggedOut: {ex.Message}");
             }
+        }
+
+        public async Task NotifyAuthenticationStateChanged()
+        {
+            Console.WriteLine("SpotifyAuthenticationStateProvider: NotifyAuthenticationStateChanged called");
+
+            // Hent den aktuelle authentication state
+            var authState = await GetAuthenticationStateAsync();
+
+            // Brug den beskyttede metode til at opdatere authentication state
+            NotifyAuthenticationStateChanged(Task.FromResult(authState));
         }
     }
 }
