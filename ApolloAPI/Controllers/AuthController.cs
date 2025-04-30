@@ -22,6 +22,7 @@ public class AuthController : ControllerBase
     private readonly SpotifyService _spotifyService;
     private readonly IConfiguration _configuration;
     private readonly TokenService _tokenService;
+    private readonly string _clientAppUrl;
 
     public AuthController(
         ILogger<AuthController> logger,
@@ -33,6 +34,9 @@ public class AuthController : ControllerBase
         _spotifyService = spotifyService;
         _configuration = configuration;
         _tokenService = tokenService;
+        _clientAppUrl = _configuration["AppSettings:ClientAppUrl"] ?? "https://localhost:7210";
+        
+        _logger.LogInformation("ClientAppUrl configured as: {ClientAppUrl}", _clientAppUrl);
     }
 
     private async Task<string> GetValidAccessTokenAsync()
@@ -206,13 +210,21 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string returnUrl = "/")
+    public IActionResult Login(string returnUrl = null)
     {
         var clientId = _configuration["Spotify:ClientId"];
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
-        var scopes = "user-read-private user-read-email user-top-read";
+        
+        // Store the return URL to use after authentication
+        var stateData = new Dictionary<string, string>
+        {
+            { "returnUrl", !string.IsNullOrEmpty(returnUrl) ? returnUrl : $"{_clientAppUrl}/dashboard" }
+        };
+        var stateJson = JsonSerializer.Serialize(stateData);
+        var state = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
+        
+        var scopes = "user-read-private user-read-email user-top-read user-read-currently-playing";
 
-        var state = Guid.NewGuid().ToString(); // Generate a random state value
         var authorizationUrl = $"https://accounts.spotify.com/authorize" +
                                $"?client_id={Uri.EscapeDataString(clientId)}" +
                                $"&response_type=code" +
@@ -220,21 +232,27 @@ public class AuthController : ControllerBase
                                $"&scope={Uri.EscapeDataString(scopes)}" +
                                $"&state={Uri.EscapeDataString(state)}";
 
+        _logger.LogInformation("Redirecting to Spotify authorization: {Url}", authorizationUrl);
         return Redirect(authorizationUrl);
     }
 
     [HttpGet("logout")]
-    public async Task<IActionResult> Logout(string returnUrl = "/")
+    public IActionResult Logout(string returnUrl = null)
     {
         _logger.LogInformation("Logout request received");
 
-        if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) && !returnUrl.StartsWith("/"))
+        // Default redirect to client app if not specified
+        if (string.IsNullOrEmpty(returnUrl))
         {
-            returnUrl = "/";
+            returnUrl = _clientAppUrl;
+        }
+        else if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) && !returnUrl.StartsWith("/"))
+        {
+            returnUrl = _clientAppUrl;
         }
 
         _tokenService.ClearAccessTokens();
-        _logger.LogInformation("User signed out successfully");
+        _logger.LogInformation("User signed out successfully, redirecting to {ReturnUrl}", returnUrl);
 
         return Redirect(returnUrl);
     }
@@ -245,7 +263,30 @@ public class AuthController : ControllerBase
         if (string.IsNullOrEmpty(code))
         {
             _logger.LogError("Authorization code is missing.");
-            return Redirect("/?error=missing_code");
+            return Redirect($"{_clientAppUrl}?error=missing_code");
+        }
+
+        string returnUrl = $"{_clientAppUrl}/dashboard";
+        
+        // Try to extract return URL from state if available
+        if (!string.IsNullOrEmpty(state))
+        {
+            try
+            {
+                var stateBytes = Convert.FromBase64String(state);
+                var stateJson = Encoding.UTF8.GetString(stateBytes);
+                var stateData = JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
+                
+                if (stateData != null && stateData.TryGetValue("returnUrl", out var stateReturnUrl))
+                {
+                    returnUrl = stateReturnUrl;
+                    _logger.LogInformation("Extracted return URL from state: {ReturnUrl}", returnUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse state parameter, using default return URL");
+            }
         }
 
         var clientId = _configuration["Spotify:ClientId"];
@@ -258,18 +299,19 @@ public class AuthController : ControllerBase
         if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
         {
             _logger.LogError("Failed to exchange authorization code for token.");
-            return Redirect("/?error=token_exchange_failed");
+            return Redirect($"{_clientAppUrl}?error=token_exchange_failed");
         }
 
         // Store the access token and refresh token
         _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
         _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
 
-        return Redirect("/dashboard");
+        _logger.LogInformation("Successfully exchanged code for token. Redirecting to {ReturnUrl}", returnUrl);
+        return Redirect(returnUrl);
     }
 
     [HttpGet("handle-state-error")]
-    public async Task<IActionResult> HandleStateError(string code)
+    public async Task<IActionResult> HandleStateError(string code, string returnUrl = null)
     {
         _logger.LogInformation("Handling Spotify OAuth callback with code: {CodeStart}...",
             code?.Substring(0, Math.Min(10, code?.Length ?? 0)));
@@ -279,8 +321,13 @@ public class AuthController : ControllerBase
             if (string.IsNullOrEmpty(code))
             {
                 _logger.LogError("No authorization code found in request");
-                return Redirect("/?error=no_auth_code");
+                return Redirect($"{_clientAppUrl}?error=no_auth_code");
             }
+
+            // Use provided returnUrl or default to client app dashboard
+            string redirectUrl = !string.IsNullOrEmpty(returnUrl) 
+                ? returnUrl 
+                : $"{_clientAppUrl}/dashboard";
 
             var clientId = _configuration["Spotify:ClientId"];
             var clientSecret = _configuration["Spotify:ClientSecret"];
@@ -292,7 +339,7 @@ public class AuthController : ControllerBase
             if (tokenResponse == null)
             {
                 _logger.LogError("Token response is null after exchange attempt");
-                return Redirect("/?error=token_exchange_failed");
+                return Redirect($"{_clientAppUrl}?error=token_exchange_failed");
             }
 
             if (string.IsNullOrEmpty(tokenResponse.AccessToken))
@@ -304,7 +351,7 @@ public class AuthController : ControllerBase
                     tokenResponse.Scope,
                     tokenResponse.ExpiresIn,
                     !string.IsNullOrEmpty(tokenResponse.RefreshToken));
-                return Redirect("/?error=token_exchange_failed");
+                return Redirect($"{_clientAppUrl}?error=token_exchange_failed");
             }
 
             // Store the access token and refresh token
@@ -315,15 +362,15 @@ public class AuthController : ControllerBase
                 _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
             }
 
-            _logger.LogInformation("Successfully exchanged code for token. Redirecting to /dashboard");
+            _logger.LogInformation("Successfully exchanged code for token. Redirecting to {RedirectUrl}", redirectUrl);
 
-            // Redirect the user to the dashboard
-            return Redirect("/dashboard");
+            // Redirect the user to the dashboard on the client app
+            return Redirect(redirectUrl);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling Spotify OAuth callback");
-            return Redirect("/?error=unexpected_error");
+            return Redirect($"{_clientAppUrl}?error=unexpected_error");
         }
     }
 
@@ -388,5 +435,4 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "unexpected_error" });
         }
     }
-
 }

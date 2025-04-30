@@ -25,78 +25,7 @@
     }
     else
     {
-        <div class="user-profile-section">
-            @if (userProfile != null)
-            {
-                <div class="user-profile">
-                    <h2>Welcome, @userProfile.DisplayName!</h2>
-                    @if (userProfile.Images != null && userProfile.Images.Any())
-                    {
-                        <img src="@userProfile.Images.First().Url" alt="Profile picture" class="profile-picture" />
-                    }
-                </div>
-            }
-        </div>
-
-        <div class="top-tracks-section">
-            <h3>Your Top Tracks</h3>
-            @if (topTracks != null && topTracks.Any())
-            {
-                <div class="track-list">
-                    @foreach (var track in topTracks)
-                    {
-                        <div class="track-item">
-                            <div class="track-image">
-                                <img src="@track.AlbumImageUrl" alt="Album cover" />
-                            </div>
-                            <div class="track-info">
-                                <h4>@track.SongName</h4>
-                                <p>@track.Artist</p>
-                                <p>@track.Album</p>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <p>No top tracks found.</p>
-            }
-        </div>
-
-        <div class="currently-playing-section">
-            <h3>Currently Playing</h3>
-            @if (currentlyPlaying != null)
-            {
-                <div class="currently-playing-track">
-                    <div class="track-image">
-                        <img src="@currentlyPlaying.AlbumImageUrl" alt="Album cover" />
-                    </div>
-                    <div class="track-info">
-                        <h4>@currentlyPlaying.SongName</h4>
-                        <p>@currentlyPlaying.Artist</p>
-                        <p>@currentlyPlaying.Album</p>
-                        <div class="progress">
-                            <div class="progress-bar" role="progressbar"
-                                 style="width: @((currentlyPlaying.Progress.TotalSeconds / currentlyPlaying.Duration.TotalSeconds) * 100)%"
-                                 aria-valuenow="@currentlyPlaying.Progress.TotalSeconds"
-                                 aria-valuemin="0"
-                                 aria-valuemax="@currentlyPlaying.Duration.TotalSeconds">
-                            </div>
-                        </div>
-                        <p>@FormatTimeSpan(currentlyPlaying.Progress) / @FormatTimeSpan(currentlyPlaying.Duration)</p>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <p>No track is currently playing.</p>
-            }
-        </div>
-
-        <div class="actions-section">
-            <button class="btn btn-danger" @onclick="Logout">Logout</button>
-        </div>
+        @* Dashboard content *@
     }
 </div>
 
@@ -110,14 +39,45 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await CheckAuthAndLoadData();
     }
 
-    private async Task LoadData()
+    private async Task CheckAuthAndLoadData()
     {
         isLoading = true;
         hasError = false;
 
+        try
+        {
+            // Check authentication first
+            bool isAuthenticated = await AuthService.IsUserAuthenticated();
+            await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
+
+            if (!isAuthenticated)
+            {
+                hasError = true;
+                errorMessage = "You need to login to Spotify to access this dashboard.";
+                isLoading = false;
+                return;
+            }
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = $"Authentication check failed: {ex.Message}";
+            await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
         try
         {
             await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Loading data");
@@ -139,16 +99,16 @@
             errorMessage = "Failed to load Spotify data. Please try again.";
             await JSRuntime.InvokeVoidAsync("console.error", "Dashboard error:", ex.Message);
         }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
     }
 
     private async Task RetryLoading()
     {
         await LoadData();
+    }
+
+    private async Task Login()
+    {
+        await AuthService.LoginAsync();
     }
 
     private async Task Logout()

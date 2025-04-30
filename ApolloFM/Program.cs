@@ -13,9 +13,6 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Add Blazored LocalStorage
-builder.Services.AddBlazoredLocalStorage();
-
 // Add auth to the application
 builder.Services.AddAuthorizationCore();
 
@@ -36,6 +33,22 @@ builder.Services.AddAuthorizationCore();
 
 // Register AuthorizationMessageHandler
 //builder.Services.AddScoped<AuthorizationMessageHandler>();
+
+// Check if Dashboard component is correctly registered
+var pages = System.Reflection.Assembly.GetExecutingAssembly()
+    .GetTypes()
+    .Where(t => t.GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.RouteAttribute), true).Length > 0);
+
+Console.WriteLine("Registered pages:");
+foreach (var page in pages)
+{
+    var routeAttributes = page.GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.RouteAttribute), true);
+    foreach (Microsoft.AspNetCore.Components.RouteAttribute attr in routeAttributes)
+    {
+        Console.WriteLine($"- {page.Name}: {attr.Template}");
+    }
+}
+
 
 // Configure HttpClient for Spotify API
 builder.Services.AddHttpClient("SpotifyAPI", client =>

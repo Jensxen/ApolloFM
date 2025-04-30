@@ -92,18 +92,27 @@ namespace FM.Application.Services
 
         public async Task LoginAsync()
         {
-            var clientId = "824cb0e5e1d549c683c642d9c9ae062b";
-            var redirectUri = $"{_navigationManager.BaseUri}spotify-callback"; // Create this page
-            var scopes = "user-read-private user-read-email user-top-read user-read-currently-playing";
+            try
+            {
+                var apiUrl = "https://localhost:7043"; // Your API URL
 
-            var spotifyUrl = $"https://accounts.spotify.com/authorize" +
-                             $"?client_id={Uri.EscapeDataString(clientId)}" +
-                             $"&response_type=code" +
-                             $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-                             $"&scope={Uri.EscapeDataString(scopes)}";
+                // Get the current URL to return to after login
+                var returnUrl = $"{_navigationManager.BaseUri}dashboard";
 
-            _navigationManager.NavigateTo(spotifyUrl, forceLoad: true);
+                // Redirect to API login endpoint with return URL
+                var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
+                _navigationManager.NavigateTo(loginUrl, forceLoad: true);
+
+                // No return value needed for Task
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Login error: {ex.Message}");
+                throw; // Re-throw the exception so caller knows login failed
+            }
         }
+
+
 
         public async Task HandleCallback(string code)
         {

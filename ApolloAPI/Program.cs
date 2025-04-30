@@ -1,6 +1,6 @@
 using FM.Infrastructure;
 using FM.Application;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Components.WebAssembly.Server;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using AspNet.Security.OAuth.Spotify;
@@ -8,9 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using FM.Application.Services;
-using Microsoft.AspNetCore.Session;
 using Microsoft.AspNetCore.Authentication;
-using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -141,19 +139,6 @@ builder.Services.AddHttpClient<SpotifyService>(client =>
     client.BaseAddress = new Uri("https://api.spotify.com/v1/");
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(
-        policy =>
-    {
-              policy.WithOrigins("https://localhost:7210")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
-});
-
-
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddApplicationServices(isApiContext: true);
@@ -170,14 +155,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
-app.UseHttpsRedirection();
-
-
 app.UseRouting();
 app.UseCors();
-app.UseCookiePolicy();
-app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

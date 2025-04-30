@@ -1,0 +1,20 @@
+﻿@page "/dashboard-test"
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<h1>Dashboard Test Page</h1>
+<p>This is a minimal test of dashboard routing</p>
+
+<button class="btn btn-primary" @onclick="GoHome">Go Home</button>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", "Dashboard test page initialized");
+    }
+
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
