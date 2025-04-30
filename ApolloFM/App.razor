@@ -5,12 +5,10 @@
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
-            <PageTitle>Ikke fundet</PageTitle>
+            <PageTitle>Not found</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">Beklager, der er intet indhold på denne adresse.</p>
-                <a href="/" class="btn btn-primary">Gå til forsiden</a>
+                <p role="alert">Sorry, there's nothing at this address.</p>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
-``

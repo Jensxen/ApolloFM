@@ -21,33 +21,28 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddAuthorizationCore();
 
 // Add OIDC authentication
-builder.Services.AddOidcAuthentication(options =>
-{
-    builder.Configuration.Bind("OidcProviderOptions", options.ProviderOptions);
-    options.ProviderOptions.Authority = "https://accounts.spotify.com";
-    options.ProviderOptions.ClientId = "824cb0e5e1d549c683c642d9c9ae062b";
-    options.ProviderOptions.ResponseType = "code";
-    options.ProviderOptions.DefaultScopes.Add("user-read-email");
-    options.ProviderOptions.DefaultScopes.Add("user-read-private");
-    options.ProviderOptions.DefaultScopes.Add("user-top-read");
-    options.ProviderOptions.DefaultScopes.Add("user-read-currently-playing");
-    options.ProviderOptions.RedirectUri = builder.HostEnvironment.BaseAddress + "authentication/login-callback";
-    options.UserOptions.RoleClaim = "role"; // Tilføj dette, hvis du bruger roller
-});
+//builder.Services.AddOidcAuthentication(options =>
+//{
+//    builder.Configuration.Bind("OidcProviderOptions", options.ProviderOptions);
+//    options.ProviderOptions.Authority = "https://accounts.spotify.com";
+//    options.ProviderOptions.ClientId = "824cb0e5e1d549c683c642d9c9ae062b";
+//    options.ProviderOptions.ResponseType = "code";
+//    options.ProviderOptions.DefaultScopes.Add("user-read-email");
+//    options.ProviderOptions.DefaultScopes.Add("user-read-private");
+//    options.ProviderOptions.DefaultScopes.Add("user-top-read");
+//    options.ProviderOptions.DefaultScopes.Add("user-read-currently-playing");
+//    options.ProviderOptions.RedirectUri = builder.HostEnvironment.BaseAddress + "authentication/login-callback";
+//    options.UserOptions.RoleClaim = "role"; // Tilføj dette, hvis du bruger roller
+//});
 
 // Register AuthorizationMessageHandler
-builder.Services.AddScoped<AuthorizationMessageHandler>();
+//builder.Services.AddScoped<AuthorizationMessageHandler>();
 
 // Configure HttpClient for Spotify API
 builder.Services.AddHttpClient("SpotifyAPI", client =>
 {
     client.BaseAddress = new Uri("https://api.spotify.com/v1/");
-}).AddHttpMessageHandler(sp =>
-    sp.GetRequiredService<AuthorizationMessageHandler>()
-        .ConfigureHandler(
-            authorizedUrls: new[] { "https://api.spotify.com/v1/" },
-            scopes: new[] { "user-read-email", "user-read-private", "user-top-read", "user-read-currently-playing" }
-        ));
+});
 
 // Configure HttpClient for your own API
 builder.Services.AddHttpClient("ApolloAPI", client =>
@@ -86,6 +81,12 @@ builder.Services.AddScoped<AuthService>(provider =>
         navigationManager, 
         tokenService);
 });
+
+builder.Services.AddTransient<SpotifyTokenHandler>();
+builder.Services.AddHttpClient("SpotifyAPIAuth", client =>
+{
+    client.BaseAddress = new Uri("https://api.spotify.com/v1/");
+}).AddHttpMessageHandler<SpotifyTokenHandler>();
 
 
 // Build and run the host

@@ -82,6 +82,47 @@ public class AuthController : ControllerBase
         return null;
     }
 
+    [HttpGet("user")]
+    public async Task<IActionResult> GetUser()
+    {
+        // Don't rely on User.Identity.IsAuthenticated for API endpoints with token-based auth
+        // Instead, directly try to get a valid access token
+        var token = await GetValidAccessTokenAsync();
+
+        if (string.IsNullOrEmpty(token))
+        {
+            _logger.LogWarning("No valid access token found for user info request");
+            return Unauthorized("Access token is missing or invalid");
+        }
+
+        try
+        {
+            var config = SpotifyClientConfig.CreateDefault().WithToken(token);
+            var spotify = new SpotifyClient(config);
+            var user = await spotify.UserProfile.Current();
+
+            _logger.LogInformation("Successfully retrieved user data for {UserId}", user.Id);
+
+            return Ok(new
+            {
+                user.DisplayName,
+                user.Email,
+                user.Id,
+                user.Images
+            });
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogError("Unauthorized when fetching user data: {Message}", ex.Message);
+            _tokenService.ClearAccessTokens();
+            return Unauthorized("The access token is invalid or expired");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching user data from Spotify");
+            return BadRequest($"Error fetching user data: {ex.Message}");
+        }
+    }
 
     [HttpGet("top-tracks/all-time")]
     public async Task<IActionResult> GetTopTracksAllTime([FromQuery] int limit = 25)
@@ -140,30 +181,28 @@ public class AuthController : ControllerBase
     {
         var accessToken = await GetValidAccessTokenAsync();
         if (string.IsNullOrEmpty(accessToken)) return Unauthorized("Access token is missing or invalid");
+
+        try
         {
-            try
+            var currentlyPlaying = await _spotifyService.GetCurrentlyPlayingTrackAsync(accessToken);
+            if (currentlyPlaying == null)
             {
-                var currentlyPlaying = await _spotifyService.GetCurrentlyPlayingTrackAsync(accessToken);
-                if (currentlyPlaying == null)
-                {
-                    return Ok(new { Message = "No track is currently playing" });
-                }
+                return Ok(new { Message = "No track is currently playing" });
+            }
 
-                return Ok(currentlyPlaying);
-            }
-            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                _logger.LogError("Unauthorized: {Message}", ex.Message);
-                _tokenService.ClearAccessTokens();
-                return Unauthorized("The access token is invalid or expired");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching currently playing track");
-                return BadRequest($"Error fetching currently playing track: {ex.Message}");
-            }
+            return Ok(currentlyPlaying);
         }
-
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogError("Unauthorized: {Message}", ex.Message);
+            _tokenService.ClearAccessTokens();
+            return Unauthorized("The access token is invalid or expired");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching currently playing track");
+            return BadRequest($"Error fetching currently playing track: {ex.Message}");
+        }
     }
 
     [HttpGet("login")]
@@ -184,6 +223,21 @@ public class AuthController : ControllerBase
         return Redirect(authorizationUrl);
     }
 
+    [HttpGet("logout")]
+    public async Task<IActionResult> Logout(string returnUrl = "/")
+    {
+        _logger.LogInformation("Logout request received");
+
+        if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) && !returnUrl.StartsWith("/"))
+        {
+            returnUrl = "/";
+        }
+
+        _tokenService.ClearAccessTokens();
+        _logger.LogInformation("User signed out successfully");
+
+        return Redirect(returnUrl);
+    }
 
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(string code, string state)
@@ -214,24 +268,6 @@ public class AuthController : ControllerBase
         return Redirect("/dashboard");
     }
 
-
-    [HttpGet("logout")]
-    public async Task<IActionResult> Logout(string returnUrl = "/")
-    {
-        _logger.LogInformation("Logout request received");
-
-        if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Absolute) && !returnUrl.StartsWith("/"))
-        {
-            returnUrl = "/";
-        }
-
-        _tokenService.ClearAccessTokens();
-        _logger.LogInformation("User signed out successfully");
-
-        return Redirect(returnUrl);
-    }
-
-
     [HttpGet("handle-state-error")]
     public async Task<IActionResult> HandleStateError(string code)
     {
@@ -253,9 +289,21 @@ public class AuthController : ControllerBase
             // Use SpotifyService to exchange the authorization code for an access token
             var tokenResponse = await _spotifyService.ExchangeCodeForTokenAsync(code, clientId, clientSecret, redirectUri);
 
-            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+            if (tokenResponse == null)
             {
-                _logger.LogError("Failed to exchange code for token");
+                _logger.LogError("Token response is null after exchange attempt");
+                return Redirect("/?error=token_exchange_failed");
+            }
+
+            if (string.IsNullOrEmpty(tokenResponse.AccessToken))
+            {
+                _logger.LogError("Access token is empty or null in token response");
+                // Log all properties of the token response
+                _logger.LogInformation("Token response properties: TokenType={TokenType}, Scope={Scope}, ExpiresIn={ExpiresIn}, RefreshToken={HasRefreshToken}",
+                    tokenResponse.TokenType,
+                    tokenResponse.Scope,
+                    tokenResponse.ExpiresIn,
+                    !string.IsNullOrEmpty(tokenResponse.RefreshToken));
                 return Redirect("/?error=token_exchange_failed");
             }
 
@@ -279,53 +327,65 @@ public class AuthController : ControllerBase
         }
     }
 
-
-
-
-    [HttpGet("user")]
-    public async Task<IActionResult> GetUser()
+    [HttpGet("check-tokens")]
+    public IActionResult CheckTokens()
     {
-        if (!User.Identity.IsAuthenticated)
-        {
-            _logger.LogWarning("Unauthenticated user tried to access user info");
-            return Unauthorized();
-        }
+        var accessToken = _tokenService.GetAccessToken();
+        var refreshToken = _tokenService.GetRefreshToken();
 
-        var token = await GetValidAccessTokenAsync();
-        if (string.IsNullOrEmpty(token))
+        return Ok(new
         {
-            _logger.LogWarning("No access token found for authenticated user");
-            return Unauthorized("Access token is missing or invalid");
+            hasAccessToken = !string.IsNullOrEmpty(accessToken),
+            accessTokenLength = accessToken?.Length ?? 0,
+            accessTokenExpired = accessToken != null && _tokenService.NeedsRefresh(),
+            hasRefreshToken = !string.IsNullOrEmpty(refreshToken),
+            refreshTokenLength = refreshToken?.Length ?? 0
+        });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken([FromQuery] string refreshToken)
+    {
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            _logger.LogError("Refresh token is missing in request");
+            return BadRequest(new { error = "refresh_token_required" });
         }
 
         try
         {
-            var config = SpotifyClientConfig.CreateDefault().WithToken(token);
-            var spotify = new SpotifyClient(config);
-            var user = await spotify.UserProfile.Current();
+            var clientId = _configuration["Spotify:ClientId"];
+            var clientSecret = _configuration["Spotify:ClientSecret"];
 
-            _logger.LogInformation("Successfully retrieved user data for {UserId}", user.Id);
+            var tokenResponse = await _spotifyService.RefreshAccessTokenAsync(refreshToken, clientId, clientSecret);
 
+            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+            {
+                _logger.LogError("Failed to refresh access token");
+                return BadRequest(new { error = "token_refresh_failed" });
+            }
+
+            _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
+
+            if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+            {
+                _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
+            }
+
+            _logger.LogInformation("Successfully refreshed access token");
+
+            // Return just what the client needs, don't expose full token details
             return Ok(new
             {
-                user.DisplayName,
-                user.Email,
-                user.Id,
-                user.Images
+                accessToken = tokenResponse.AccessToken,
+                expiresIn = tokenResponse.ExpiresIn,
+                hasRefreshToken = !string.IsNullOrEmpty(tokenResponse.RefreshToken)
             });
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            _logger.LogError("Unauthorized: {Message}", ex.Message);
-
-            // Clear tokens and force reauthorization
-            _tokenService.ClearAccessTokens();
-            return Unauthorized("The access token is invalid or expired");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching user data from Spotify");
-            return BadRequest($"Error fetching user data: {ex.Message}");
+            _logger.LogError(ex, "Error refreshing access token");
+            return StatusCode(500, new { error = "unexpected_error" });
         }
     }
 

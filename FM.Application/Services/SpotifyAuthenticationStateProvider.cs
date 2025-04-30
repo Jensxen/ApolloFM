@@ -1,75 +1,77 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿// Make sure this class correctly implements AuthenticationStateProvider
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 public class SpotifyAuthenticationStateProvider : AuthenticationStateProvider
 {
     private readonly IJSRuntime _jsRuntime;
-    private readonly NavigationManager _navigation;
-    private ClaimsPrincipal _user = new ClaimsPrincipal(new ClaimsIdentity());
+    private readonly NavigationManager _navigationManager;
+    private ClaimsPrincipal _currentUser = new ClaimsPrincipal(new ClaimsIdentity());
 
-    private const string TokenKey = "spotify_token";
-
-    public SpotifyAuthenticationStateProvider(IJSRuntime jsRuntime, NavigationManager navigation)
+    public SpotifyAuthenticationStateProvider(IJSRuntime jsRuntime, NavigationManager navigationManager)
     {
         _jsRuntime = jsRuntime;
-        _navigation = navigation;
-
-        Console.WriteLine("SpotifyAuthenticationStateProvider instantiated");
+        _navigationManager = navigationManager;
     }
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        Console.WriteLine("SpotifyAuthenticationStateProvider: Getting authentication state");
-
-        var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", TokenKey);
-
-        var identity = string.IsNullOrEmpty(token)
-            ? new ClaimsIdentity()
-            : new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.Name, "SpotifyUser"),
-                new Claim("access_token", token)
-            }, "Spotify");
-
-        _user = new ClaimsPrincipal(identity);
-
-        return new AuthenticationState(_user);
+        return Task.FromResult(new AuthenticationState(_currentUser));
     }
 
     public async Task MarkUserAsAuthenticated(string token)
     {
-        await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", TokenKey, token);
-
-        var identity = new ClaimsIdentity(new[]
+        try
         {
-            new Claim(ClaimTypes.Name, "SpotifyUser"),
-            new Claim("access_token", token)
-        }, "Spotify");
+            var authenticatedUser = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    GetClaimsFromToken(token),
+                    "spotify"
+                )
+            );
 
-        _user = new ClaimsPrincipal(identity);
-
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_user)));
+            _currentUser = authenticatedUser;
+            NotifyAuthenticationStateChanged(
+                Task.FromResult(new AuthenticationState(_currentUser))
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error marking user as authenticated: {ex.Message}");
+            throw;
+        }
     }
 
-    public async Task MarkUserAsLoggedOut()
+    public Task MarkUserAsLoggedOut()
     {
-        await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", TokenKey);
+        _currentUser = new ClaimsPrincipal(new ClaimsIdentity());
 
-        _user = new ClaimsPrincipal(new ClaimsIdentity());
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_user)));
-    }
+        NotifyAuthenticationStateChanged(
+            Task.FromResult(new AuthenticationState(_currentUser))
+        );
 
-    public async Task<string> GetAccessTokenAsync()
-    {
-        return await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", TokenKey);
+        return Task.CompletedTask;
     }
 
     public void TriggerAuthenticationStateChanged()
-{
-    NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-}
+    {
+        NotifyAuthenticationStateChanged(
+            Task.FromResult(new AuthenticationState(_currentUser))
+        );
+        Console.WriteLine("Authentication state change triggered");
+    }
 
+    private IEnumerable<Claim> GetClaimsFromToken(string token)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "spotify_user"),
+            new Claim(ClaimTypes.Name, "Spotify User"),
+            new Claim(ClaimTypes.Authentication, token)
+        };
+
+        return claims;
+    }
 }

@@ -1,0 +1,47 @@
+﻿@page "/spotify-callback"
+@using FM.Application.Services
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+	<div class="text-center">
+		<div class="spinner-border text-primary mb-3" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+		<h3>Processing Login...</h3>
+		<p>Please wait while we connect your Spotify account.</p>
+	</div>
+</div>
+
+@code {
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var uri = new Uri(NavigationManager.Uri);
+			var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+			var code = query["code"];
+			var error = query["error"];
+
+			if (!string.IsNullOrEmpty(error))
+			{
+				NavigationManager.NavigateTo($"/?error={Uri.EscapeDataString(error)}");
+				return;
+			}
+
+			if (!string.IsNullOrEmpty(code))
+			{
+				await AuthService.HandleCallback(code);
+			}
+			else
+			{
+				NavigationManager.NavigateTo("/?error=no_authorization_code");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error in callback: {ex.Message}");
+			NavigationManager.NavigateTo("/?error=callback_error");
+		}
+	}
+}

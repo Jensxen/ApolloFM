@@ -5,92 +5,77 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
-<h3>Login with Spotify</h3>
-
 <div class="container mt-4">
-	<div class="row">
-		<div class="col-md-6 offset-md-3">
-			<div class="card">
-				<div class="card-header bg-dark text-white">
-					Connect with Spotify
-				</div>
-				<div class="card-body text-center">
-					<p>Connect your Spotify account to share and discover music with others!</p>
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    Connect with Spotify
+                </div>
+                <div class="card-body text-center">
+                    <p>Connect your Spotify account to share and discover music with others!</p>
 
-					<button class="btn btn-success btn-lg" @onclick="LoginWithSpotify">
-						<i class="fab fa-spotify me-2"></i> Connect with Spotify
-					</button>
+                    <button class="btn btn-success btn-lg" @onclick="LoginWithSpotify">
+                        <i class="fab fa-spotify me-2"></i> Connect with Spotify
+                    </button>
 
-					<button class="btn btn-outline-secondary mt-3" @onclick="DirectLogin">
-						<i class="fas fa-bug me-1"></i> Debug Login
-					</button>
-
-					@if (!string.IsNullOrEmpty(errorMessage))
-					{
-						<div class="alert alert-danger mt-3">
-							@errorMessage
-						</div>
-					}
-				</div>
-			</div>
-		</div>
-	</div>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">
+                            @errorMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
-	private string errorMessage = "";
+    private string errorMessage = "";
 
-	protected override void OnInitialized()
-	{
-		try
-		{
-			var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-			var query = QueryHelpers.ParseQuery(uri.Query);
+    protected override void OnInitialized()
+    {
+        try
+        {
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
 
-			if (query.TryGetValue("error", out var error))
-			{
-				errorMessage = error;
-				Console.WriteLine($"Error from URL: {error}");
-			}
-			else if (query.TryGetValue("authentication_failed", out var authFailed))
-			{
-				errorMessage = "Authentication failed. Please try again.";
-				Console.WriteLine("Authentication failed from URL parameter");
-			}
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error parsing URL: {ex.Message}");
-		}
-	}
+            if (query.TryGetValue("error", out var error))
+            {
+                errorMessage = error;
+                Console.WriteLine($"Error from URL: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing URL: {ex.Message}");
+        }
+    }
 
-	private void LoginWithSpotify()
-	{
-		try
-		{
-			// Prøv standardmetoden først
-			AuthService.Login(Navigation, useDirectMethod: false);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error in LoginWithSpotify: {ex.Message}");
-			errorMessage = $"Error initiating login: {ex.Message}";
-			StateHasChanged();
-		}
-	}
+    private void LoginWithSpotify()
+    {
+        try
+        {
+            // Simplified login with direct redirect to Spotify
+            var clientId = "824cb0e5e1d549c683c642d9c9ae062b";
+            var apiUrl = "https://localhost:7043";
+            var redirectUri = $"{apiUrl}/api/auth/handle-state-error";
+            var scopes = "user-read-email user-read-private user-top-read user-read-currently-playing";
 
-	private void DirectLogin()
-	{
-		try
-		{
-			// Brug den direkte metode, som virker
-			AuthService.Login(Navigation, useDirectMethod: true);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error in DirectLogin: {ex.Message}");
-			errorMessage = $"Error initiating direct login: {ex.Message}";
-			StateHasChanged();
-		}
-	}
+            var spotifyUrl = $"https://accounts.spotify.com/authorize" +
+                          $"?client_id={Uri.EscapeDataString(clientId)}" +
+                          $"&response_type=code" +
+                          $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                          $"&scope={Uri.EscapeDataString(scopes)}";
+
+            Navigation.NavigateTo(spotifyUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in LoginWithSpotify: {ex.Message}");
+            errorMessage = $"Error initiating login: {ex.Message}";
+            StateHasChanged();
+        }
+    }
 }

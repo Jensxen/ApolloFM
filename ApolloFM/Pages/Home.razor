@@ -87,6 +87,8 @@
 				}
 			}
 
+			AuthStateProvider.AuthenticationStateChanged += AuthenticationStateChangedHandler;
+
 			// Tjek om brugeren er logget ind
 			isLoggedIn = await AuthService.IsUserAuthenticated();
 		}
@@ -195,7 +197,7 @@
 	{
 		try
 		{
-			AuthService.Logout();
+			AuthService.LogoutAsync();
 		}
 		catch (Exception ex)
 		{

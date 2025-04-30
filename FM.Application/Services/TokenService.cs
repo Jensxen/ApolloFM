@@ -1,108 +1,71 @@
-﻿using System;
-using System.Threading;
-
-namespace FM.Application.Services
+﻿// Example of correct TokenService implementation
+public class TokenService
 {
-    public class TokenService
-    {
-        private string _accessToken;
-        private string _refreshToken;
-        private DateTime _expirationTime;
-        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+    private string _accessToken;
+    private DateTime _expirationTime;
+    private string _refreshToken;
+    
+    // Proper locking mechanism for thread safety
+    private readonly object _lock = new object();
 
-        /// <summary>
-        /// Retrieves the current access token if it is still valid.
-        /// </summary>
-        public string GetAccessToken()
+    public string GetAccessToken()
+    {
+        lock (_lock)
         {
             if (string.IsNullOrEmpty(_accessToken) || DateTime.UtcNow >= _expirationTime)
             {
-                return null; // Token is either missing or expired
+                return null;
             }
-
             return _accessToken;
         }
+    }
 
-        /// <summary>
-        /// Checks if the access token needs to be refreshed.
-        /// </summary>
-        /// <returns>True if the token is missing, expired, or will expire soon. False otherwise.</returns>
-        public bool NeedsRefresh()
+    public void SetAccessToken(string accessToken, int expiresInSeconds)
+    {
+        if (string.IsNullOrEmpty(accessToken))
+            throw new ArgumentNullException(nameof(accessToken));
+            
+        lock (_lock)
         {
-            // If we have no token, or if it's expired or will expire soon (within 5 minutes)
-            return string.IsNullOrEmpty(_accessToken) || 
-                   DateTime.UtcNow.AddMinutes(5) >= _expirationTime;
+            _accessToken = accessToken;
+            _expirationTime = DateTime.UtcNow.AddSeconds(expiresInSeconds);
         }
+    }
 
-        /// <summary>
-        /// Sets the access token and its expiration time.
-        /// </summary>
-        public void SetAccessToken(string accessToken, int expiresInSeconds)
-        {
-            if (string.IsNullOrEmpty(accessToken)) throw new ArgumentNullException(nameof(accessToken));
-
-            _lock.Wait();
-            try
-            {
-                _accessToken = accessToken;
-                _expirationTime = DateTime.UtcNow.AddSeconds(expiresInSeconds);
-            }
-            finally
-            {
-                _lock.Release();
-            }
-        }
-
-        /// <summary>
-        /// Retrieves the current refresh token.
-        /// </summary>
-        public string GetRefreshToken()
+    public string GetRefreshToken()
+    {
+        lock (_lock)
         {
             return _refreshToken;
         }
+    }
 
-        /// <summary>
-        /// Sets the refresh token.
-        /// </summary>
-        public void SetRefreshToken(string refreshToken)
+    public void SetRefreshToken(string refreshToken)
+    {
+        if (string.IsNullOrEmpty(refreshToken))
+            throw new ArgumentNullException(nameof(refreshToken));
+            
+        lock (_lock)
         {
-            if (string.IsNullOrEmpty(refreshToken)) throw new ArgumentNullException(nameof(refreshToken));
-
-            _lock.Wait();
-            try
-            {
-                _refreshToken = refreshToken;
-            }
-            finally
-            {
-                _lock.Release();
-            }
+            _refreshToken = refreshToken;
         }
+    }
 
-        /// <summary>
-        /// Clears the access token, refresh token, and expiration time.
-        /// </summary>
-        public void ClearAccessToken()
+    public bool NeedsRefresh()
+    {
+        lock (_lock)
         {
-            _lock.Wait();
-            try
-            {
-                _accessToken = null;
-                _refreshToken = null;
-                _expirationTime = DateTime.MinValue;
-            }
-            finally
-            {
-                _lock.Release();
-            }
+            return string.IsNullOrEmpty(_accessToken) || DateTime.UtcNow.AddMinutes(5) >= _expirationTime;
         }
+    }
 
-        /// <summary>
-        /// Clears all tokens (alias for ClearAccessToken for consistency).
-        /// </summary>
-        public void ClearAccessTokens()
+    public void ClearAccessTokens()
+    {
+        lock (_lock)
         {
-            ClearAccessToken();
+            _accessToken = null;
+            _refreshToken = null;
+            _expirationTime = DateTime.MinValue;
         }
     }
 }
