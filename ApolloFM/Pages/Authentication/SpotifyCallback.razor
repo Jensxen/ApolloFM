@@ -1,47 +1,49 @@
 ﻿@page "/spotify-callback"
-@using FM.Application.Services
-@inject AuthService AuthService
+@using Microsoft.AspNetCore.WebUtilities
+@using FM.Application.Services;
+@using System.Web
 @inject NavigationManager NavigationManager
+@inject AuthService AuthService
+@inject IJSRuntime JSRuntime
 
 <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
-	<div class="text-center">
-		<div class="spinner-border text-primary mb-3" role="status">
-			<span class="visually-hidden">Loading...</span>
-		</div>
-		<h3>Processing Login...</h3>
-		<p>Please wait while we connect your Spotify account.</p>
-	</div>
+    <div class="text-center">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h3>Processing Login...</h3>
+        <p>Please wait while we connect your Spotify account.</p>
+    </div>
 </div>
 
 @code {
-	protected override async Task OnInitializedAsync()
-	{
-		try
-		{
-			var uri = new Uri(NavigationManager.Uri);
-			var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-			var code = query["code"];
-			var error = query["error"];
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-			if (!string.IsNullOrEmpty(error))
-			{
-				NavigationManager.NavigateTo($"/?error={Uri.EscapeDataString(error)}");
-				return;
-			}
-
-			if (!string.IsNullOrEmpty(code))
-			{
-				await AuthService.HandleCallback(code);
-			}
-			else
-			{
-				NavigationManager.NavigateTo("/?error=no_authorization_code");
-			}
-		}
-		catch (Exception ex)
-		{
-			Console.Error.WriteLine($"Error in callback: {ex.Message}");
-			NavigationManager.NavigateTo("/?error=callback_error");
-		}
-	}
+            if (queryParams.TryGetValue("code", out var code))
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", "Handling Spotify callback with code:", code);
+                await AuthService.HandleCallback(code);
+            }
+            else if (queryParams.TryGetValue("error", out var error))
+            {
+                await JSRuntime.InvokeVoidAsync("console.error", "Spotify auth error:", error);
+                NavigationManager.NavigateTo($"/?error={error}");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("console.error", "No code or error in callback URL");
+                NavigationManager.NavigateTo("/?error=no_auth_params");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error handling Spotify callback:", ex.Message);
+            NavigationManager.NavigateTo("/?error=callback_error");
+        }
+    }
 }

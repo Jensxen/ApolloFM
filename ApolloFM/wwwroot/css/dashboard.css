@@ -1,161 +1,91 @@
-﻿/* Make sure the root HTML and body elements have full height */
-html, body, #app {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    overflow-x: hidden;
-}
+﻿/* In your wwwroot/css/app.css or a separate dashboard.css file */
 
-/* Dashboard container should take full width and height */
 .dashboard-container {
-    min-height: 100vh;
-    width: 100vw;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    background-color: #212121;
-    color: white;
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-}
-
-/* Sidebar should have a fixed width */
-.sidebar {
-    width: 250px;
-    min-width: 250px;
-    background-color: #191414;
-    height: 100vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Main content should take remaining width */
-.main-content {
-    flex: 1;
-    height: 100vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Content body should take the remaining height */
-.content-body {
-    flex: 1;
     padding: 20px;
-    overflow-y: auto;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* For tablet-sized screens */
-@media (max-width: 992px) {
-    .dashboard-container {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        width: 100%;
-        height: auto;
-        min-height: auto;
-    }
-
-    .nav-menu {
-        display: flex;
-        flex-direction: row;
-        overflow-x: auto;
-    }
-
-    .nav-item {
-        min-width: 150px;
-        text-align: center;
-    }
-
-    .main-content {
-        height: calc(100vh - 120px); /* Adjust based on sidebar height */
-    }
+.user-profile {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
 }
 
-/* For mobile-sized screens */
-@media (max-width: 576px) {
-    .track-card {
-        margin-bottom: 15px;
-    }
-
-    .now-playing-card {
-        flex-direction: column;
-    }
-
-    .album-art.large {
-        width: 100%;
-        height: auto;
-    }
+.profile-picture {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin-right: 20px;
 }
 
-.tracks-grid {
+.track-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
-    width: 100%;
+    margin-top: 20px;
 }
 
-.time-range-selector {
+.track-item {
+    display: flex;
+    background-color: #121212;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+    .track-item:hover {
+        transform: translateY(-5px);
+    }
+
+.track-image img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
+.track-info {
+    padding: 15px;
+    flex-grow: 1;
+}
+
+    .track-info h4 {
+        margin: 0 0 5px 0;
+        font-size: 16px;
+    }
+
+    .track-info p {
+        margin: 0;
+        color: #b3b3b3;
+        font-size: 14px;
+    }
+
+.currently-playing-track {
+    display: flex;
+    background-color: #181818;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.progress {
+    height: 4px;
+    margin: 10px 0;
+    background-color: #535353;
+}
+
+.progress-bar {
+    background-color: #1db954;
+}
+
+.actions-section {
+    margin-top: 30px;
     display: flex;
     justify-content: center;
-    margin: 0 0 20px 0;
 }
 
-    .time-range-selector button {
-        background-color: transparent;
-        border: 1px solid #444;
-        color: #ccc;
-        padding: 8px 16px;
-        margin: 0 5px;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-        .time-range-selector button.active {
-            background-color: #1DB954;
-            border-color: #1DB954;
-            color: white;
-        }
-
-        .time-range-selector button:hover:not(.active) {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-.dashboard-btn {
-    background-color: #1DB954;
-    border: none;
-    color: white;
-    font-weight: 600;
-    padding: 12px 25px;
-    border-radius: 50px;
-    font-size: 1.1rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    margin-right: 10px;
-    margin-bottom: 15px;
-}
-
-    .dashboard-btn:hover {
-        background-color: #1ED760;
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-@media (max-width: 768px) {
-    .time-range-selector button {
-        padding: 6px 12px;
-        font-size: 0.9rem;
-    }
-
-    .content-header h1 {
-        font-size: 1.6rem;
-    }
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    padding: 50px 0;
 }

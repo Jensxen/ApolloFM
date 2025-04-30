@@ -2,17 +2,8 @@
 
 <div class="page">
     <main>
-        <ErrorBoundary>
-            <ChildContent>
-                @Body
-            </ChildContent>
-            <ErrorContent Context="exception">
-                <div class="error-container">
-                    <h1>Error</h1>
-                    <p>An error has occurred while loading this component:</p>
-                    <p>@exception.Message</p>
-                </div>
-            </ErrorContent>
-        </ErrorBoundary>
+        <article class="content px-4">
+            @Body
+        </article>
     </main>
 </div>

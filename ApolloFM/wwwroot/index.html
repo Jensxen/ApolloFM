@@ -7,21 +7,40 @@
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="stylesheet" href="css/home.css" />
-    <link rel="stylesheet" href="css/dashboard.css" />
+    <link rel="stylesheet" href="css/home.css" onerror="this.onerror=null;this.href='css/app.css';" />
+    <link rel="stylesheet" href="css/dashboard.css" onerror="this.onerror=null;this.href='css/app.css';" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="ApolloFM.styles.css" rel="stylesheet" />
 </head>
 <body>
-    <div id="app">Loading...</div>
+    <div id="app">
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading ApolloFM...</p>
+        </div>
+    </div>
+
     <div id="blazor-error-ui">
         An unhandled error has occurred.
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+
     <script src="_framework/blazor.webassembly.js"></script>
+    <script src="js/authHelper.js"></script>
     <script src="js/authenticationService.js"></script>
-    <script src="authHelper.js"></script>
+
+    <!-- simple debugging -->
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            console.error("Global error:", message, "at", source, ":", lineno);
+            return false;
+        };
+
+        console.log("ApolloFM startup script executed");
+    </script>
 </body>
 </html>

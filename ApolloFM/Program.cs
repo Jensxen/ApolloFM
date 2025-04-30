@@ -1,14 +1,13 @@
 using ApolloFM;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
 using FM.Application;
 using FM.Application.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using Microsoft.Extensions.DependencyInjection;
+using ApolloFM.JsInterop;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -81,6 +80,13 @@ builder.Services.AddScoped<AuthService>(provider =>
         navigationManager, 
         tokenService);
 });
+
+// Add this line to set up the JS interop
+builder.Services.AddScoped(sp => new AuthInteropService(
+    sp.GetRequiredService<AuthenticationStateProvider>(),
+    sp.GetRequiredService<NavigationManager>()
+));
+
 
 builder.Services.AddTransient<SpotifyTokenHandler>();
 builder.Services.AddHttpClient("SpotifyAPIAuth", client =>

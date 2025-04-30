@@ -109,10 +109,6 @@ namespace FM.Application.Services
         {
             try
             {
-                // Base URL for your API
-                var apiUrl = "https://localhost:7043";
-                var clientId = "824cb0e5e1d549c683c642d9c9ae062b";
-
                 // Create client for API requests
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
@@ -133,12 +129,16 @@ namespace FM.Application.Services
                     var authProvider = (SpotifyAuthenticationStateProvider)_authStateProvider;
                     await authProvider.MarkUserAsAuthenticated(response.AccessToken);
 
+                    // Add a console log for debugging
+                    Console.WriteLine("Authentication successful, redirecting to dashboard...");
+
                     // Redirect to dashboard
                     _navigationManager.NavigateTo("/dashboard");
                 }
                 else
                 {
                     // Handle error
+                    Console.Error.WriteLine("Failed to retrieve token from API");
                     _navigationManager.NavigateTo("/?error=token_retrieval_failed");
                 }
             }
@@ -148,6 +148,7 @@ namespace FM.Application.Services
                 _navigationManager.NavigateTo("/?error=authentication_failed");
             }
         }
+
 
         private async Task<T> GetApiDataAsync<T>(string endpoint)
         {

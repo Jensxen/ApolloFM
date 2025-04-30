@@ -1,438 +1,171 @@
 ﻿@page "/dashboard"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
 @using FM.Application.Services
 @using FM.Application.Services.ServiceDTO
-@using Microsoft.AspNetCore.Components.Authorization
-@using System.Collections.Generic
-@using Blazored.LocalStorage
-@inject NavigationManager Navigation
 @inject AuthService AuthService
-@inject AuthenticationStateProvider AuthStateProvider
-@inject ILocalStorageService LocalStorage
-@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <div class="dashboard-container">
-	<div class="sidebar">
-		<div class="user-profile">
-			@if (userProfile != null)
-			{
-				<h3>@(userProfile.DisplayName ?? "Spotify User")</h3>
-			}
-			else
-			{
-				<h3>Spotify User</h3>
-			}
-			<button class="btn-logout" @onclick="Logout">Logout</button>
-		</div>
+    <h1>Your Spotify Dashboard</h1>
 
-		<div class="nav-menu">
-			<div class="nav-item @(currentTab == DashboardTab.TopTracks ? "active" : "")"
-				 @onclick="() => ChangeTab(DashboardTab.TopTracks)">
-				<i class="fas fa-chart-line"></i> Your Top Tracks
-			</div>
-			<div class="nav-item @(currentTab == DashboardTab.NowPlaying ? "active" : "")"
-				 @onclick="() => ChangeTab(DashboardTab.NowPlaying)">
-				<i class="fas fa-play-circle"></i> Now Playing
-			</div>
-		</div>
-	</div>
+    @if (isLoading)
+    {
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (hasError)
+    {
+        <div class="alert alert-danger">
+            <p>@errorMessage</p>
+            <button class="btn btn-primary" @onclick="RetryLoading">Retry</button>
+        </div>
+    }
+    else
+    {
+        <div class="user-profile-section">
+            @if (userProfile != null)
+            {
+                <div class="user-profile">
+                    <h2>Welcome, @userProfile.DisplayName!</h2>
+                    @if (userProfile.Images != null && userProfile.Images.Any())
+                    {
+                        <img src="@userProfile.Images.First().Url" alt="Profile picture" class="profile-picture" />
+                    }
+                </div>
+            }
+        </div>
 
-	<div class="main-content">
-		<div class="content-header">
-			<h1>@GetTabTitle()</h1>
+        <div class="top-tracks-section">
+            <h3>Your Top Tracks</h3>
+            @if (topTracks != null && topTracks.Any())
+            {
+                <div class="track-list">
+                    @foreach (var track in topTracks)
+                    {
+                        <div class="track-item">
+                            <div class="track-image">
+                                <img src="@track.AlbumImageUrl" alt="Album cover" />
+                            </div>
+                            <div class="track-info">
+                                <h4>@track.SongName</h4>
+                                <p>@track.Artist</p>
+                                <p>@track.Album</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p>No top tracks found.</p>
+            }
+        </div>
 
-			@if (currentTab == DashboardTab.TopTracks)
-			{
-				<div class="time-range-selector">
-					@{
-						var shortTerm = "short_term";
-						var mediumTerm = "medium_term";
-						var longTerm = "long_term";
-					}
+        <div class="currently-playing-section">
+            <h3>Currently Playing</h3>
+            @if (currentlyPlaying != null)
+            {
+                <div class="currently-playing-track">
+                    <div class="track-image">
+                        <img src="@currentlyPlaying.AlbumImageUrl" alt="Album cover" />
+                    </div>
+                    <div class="track-info">
+                        <h4>@currentlyPlaying.SongName</h4>
+                        <p>@currentlyPlaying.Artist</p>
+                        <p>@currentlyPlaying.Album</p>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: @((currentlyPlaying.Progress.TotalSeconds / currentlyPlaying.Duration.TotalSeconds) * 100)%"
+                                 aria-valuenow="@currentlyPlaying.Progress.TotalSeconds"
+                                 aria-valuemin="0"
+                                 aria-valuemax="@currentlyPlaying.Duration.TotalSeconds">
+                            </div>
+                        </div>
+                        <p>@FormatTimeSpan(currentlyPlaying.Progress) / @FormatTimeSpan(currentlyPlaying.Duration)</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p>No track is currently playing.</p>
+            }
+        </div>
 
-					<button class="@(selectedTimeRange == shortTerm ? "active" : "")"
-							@onclick="() => ChangeTimeRange(shortTerm)">
-						Last 4 Weeks
-					</button>
-					<button class="@(selectedTimeRange == mediumTerm ? "active" : "")"
-							@onclick="() => ChangeTimeRange(mediumTerm)">
-						Last 6 Months
-					</button>
-					<button class="@(selectedTimeRange == longTerm ? "active" : "")"
-							@onclick="() => ChangeTimeRange(longTerm)">
-						All Time
-					</button>
-				</div>
-
-			}
-		</div>
-
-		<div class="content-body">
-			@if (isLoading)
-			{
-				<div class="loading-spinner">
-					<div class="spinner-border text-success" role="status">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-				</div>
-			}
-			else if (error)
-			{
-				<div class="alert alert-danger">
-					@errorMessage
-					<button class="btn btn-outline-light btn-sm ms-3" @onclick="RetryLoad">Retry</button>
-				</div>
-			}
-			else
-			{
-				@switch (currentTab)
-				{
-					case DashboardTab.TopTracks:
-						<div class="tracks-grid">
-							@if (topTracks != null && topTracks.Count > 0)
-							{
-								@foreach (var track in topTracks)
-								{
-									<div class="track-card">
-										<div class="album-art">
-											<img src="@track.AlbumImageUrl" alt="Album cover for @track.Album" />
-										</div>
-										<div class="track-info">
-											<h4 class="track-name">@track.SongName</h4>
-											<p class="track-artist">@track.Artist</p>
-											<p class="track-album">@track.Album</p>
-											<a href="@track.SongUrl" target="_blank" class="btn-spotify-link">
-												<i class="fab fa-spotify"></i> Listen on Spotify
-											</a>
-										</div>
-									</div>
-								}
-							}
-							else
-							{
-								<p>No top tracks found.</p>
-							}
-						</div>
-						break;
-
-					case DashboardTab.NowPlaying:
-						<div class="now-playing">
-							@if (currentlyPlaying != null)
-							{
-								<div class="now-playing-card">
-									<div class="album-art large">
-										<img src="@currentlyPlaying.AlbumImageUrl" alt="Album cover for @currentlyPlaying.Album" />
-									</div>
-									<div class="now-playing-info">
-										<h2 class="track-name">@currentlyPlaying.SongName</h2>
-										<h3 class="track-artist">@currentlyPlaying.Artist</h3>
-										<p class="track-album">@currentlyPlaying.Album</p>
-
-										<div class="progress-bar">
-											<div class="progress" style="width: @(GetProgressPercentage())%"></div>
-										</div>
-										<div class="time-indicators">
-											<span>@currentlyPlaying.FormattedProgress</span>
-											<span>@currentlyPlaying.FormattedDuration</span>
-										</div>
-
-										<a href="@currentlyPlaying.SongUrl" target="_blank" class="btn-spotify-link large">
-											<i class="fab fa-spotify"></i> Open in Spotify
-										</a>
-									</div>
-								</div>
-							}
-							else
-							{
-								<div class="no-playback">
-									<i class="fas fa-music fa-3x"></i>
-									<p>Nothing playing right now</p>
-									<p class="subtext">Play something on Spotify to see it here!</p>
-								</div>
-							}
-						</div>
-						break;
-				}
-			}
-		</div>
-	</div>
+        <div class="actions-section">
+            <button class="btn btn-danger" @onclick="Logout">Logout</button>
+        </div>
+    }
 </div>
 
 @code {
-	private enum DashboardTab
-	{
-		TopTracks,
-		NowPlaying
-	}
+    private bool isLoading = true;
+    private bool hasError = false;
+    private string errorMessage = "";
+    private SpotifyUserProfile userProfile;
+    private List<SpotifyDataDTO> topTracks;
+    private SpotifyDataDTO currentlyPlaying;
 
-	private DashboardTab currentTab = DashboardTab.TopTracks;
-	private SpotifyUserProfile? userProfile;
-	private List<SpotifyDataDTO>? topTracks;
-	private SpotifyDataDTO? currentlyPlaying;
-	private bool isLoading = true;
-	private bool error = false;
-	private string errorMessage = "";
-	private System.Threading.Timer? refreshTimer;
-	private string selectedTimeRange = "medium_term";
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
 
-	protected override async Task OnInitializedAsync()
-	{
-		try
-		{
-			isLoading = true;
+    private async Task LoadData()
+    {
+        isLoading = true;
+        hasError = false;
 
-			// Check authentication
-			var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-			var isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-			Console.WriteLine($"Dashboard: IsAuthenticated = {isAuthenticated}");
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Loading data");
 
-			if (!isAuthenticated)
-			{
-				var token = await LocalStorage.GetItemAsync<string>("spotify_access_token");
-				if (!string.IsNullOrEmpty(token))
-				{
-					try
-					{
-						var spotifyAuthProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
-						await spotifyAuthProvider.MarkUserAsAuthenticated(token);
+            // Load user profile
+            userProfile = await AuthService.GetUserProfile();
 
-						authState = await AuthStateProvider.GetAuthenticationStateAsync();
-						isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+            // Load top tracks
+            topTracks = await AuthService.GetTopTracksAsync();
 
-						if (!isAuthenticated)
-						{
-							Console.WriteLine("Dashboard: Manual authentication failed. Redirecting to login.");
-							Navigation.NavigateTo("/");
-							return;
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine($"Dashboard: Error during manual authentication: {ex.Message}");
-						Navigation.NavigateTo("/");
-						return;
-					}
-				}
-				else
-				{
-					Console.WriteLine("Dashboard: No token found. Redirecting to login.");
-					Navigation.NavigateTo("/");
-					return;
-				}
-			}
+            // Load currently playing
+            currentlyPlaying = await AuthService.GetCurrentlyPlayingTrackAsync();
 
+            await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Data loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = "Failed to load Spotify data. Please try again.";
+            await JSRuntime.InvokeVoidAsync("console.error", "Dashboard error:", ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
 
-			// Get user profile
-			try
-			{
-				userProfile = await AuthService.GetUserProfile();
-				Console.WriteLine($"Dashboard: Got user profile: {userProfile?.DisplayName ?? "null"}");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Dashboard: Error getting profile: {ex.Message}");
-				userProfile = new SpotifyUserProfile { DisplayName = "Spotify User" };
-			}
+    private async Task RetryLoading()
+    {
+        await LoadData();
+    }
 
-			// Load initial data
-			await LoadData();
+    private async Task Logout()
+    {
+        try
+        {
+            await AuthService.LogoutAsync();
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Logout error:", ex.Message);
+        }
+    }
 
-			// Set up a timer to refresh data periodically
-			refreshTimer = new System.Threading.Timer(
-				async _ => await RefreshData(),
-				null,
-				TimeSpan.FromSeconds(30),
-				TimeSpan.FromSeconds(30)
-			);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Dashboard: Unhandled error in OnInitializedAsync: {ex.Message}");
-			error = true;
-			errorMessage = $"Error loading dashboard: {ex.Message}";
-		}
-		finally
-		{
-			isLoading = false;
-			StateHasChanged();
-		}
-	}
-
-
-	private async Task LoadData()
-	{
-		try
-		{
-			isLoading = true;
-			error = false;
-
-			if (currentTab == DashboardTab.TopTracks)
-			{
-				topTracks = await AuthService.GetTopTracksAsync(selectedTimeRange);
-
-				// Show message if no tracks returned
-				if (topTracks == null || topTracks.Count == 0)
-				{
-					topTracks = new List<SpotifyDataDTO>();
-					error = true;
-					errorMessage = "No top tracks found. You might need to listen to more music on Spotify.";
-				}
-			}
-			else if (currentTab == DashboardTab.NowPlaying)
-			{
-				currentlyPlaying = await AuthService.GetCurrentlyPlayingTrackAsync();
-				// No need to set error for null currentlyPlaying as we have a UI state for it
-			}
-		}
-		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-		{
-			// Handle token expiration
-			error = true;
-			errorMessage = "Your session has expired. Please log in again.";
-			await LocalStorage.RemoveItemAsync("spotify_access_token");
-			Navigation.NavigateTo("/");
-		}
-		catch (Exception ex)
-		{
-			error = true;
-			errorMessage = $"Error loading data: {ex.Message}";
-			Console.WriteLine($"Error in LoadData: {ex.Message}");
-		}
-		finally
-		{
-			isLoading = false;
-			StateHasChanged();
-		}
-	}
-
-
-	private async Task RefreshData()
-	{
-		try
-		{
-			// Only refresh currently playing data automatically
-			if (currentTab == DashboardTab.NowPlaying)
-			{
-				var updatedTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
-
-				// Only trigger UI update if the track changed or progress changed significantly
-				if (updatedTrack != null &&
-					(currentlyPlaying == null ||
-						currentlyPlaying.SongName != updatedTrack.SongName ||
-						Math.Abs((currentlyPlaying.Progress - updatedTrack.Progress).TotalSeconds) > 5))
-				{
-					currentlyPlaying = updatedTrack;
-					await InvokeAsync(StateHasChanged);
-				}
-			}
-		}
-		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-		{
-			// Handle token expiration silently during background refresh
-			Console.WriteLine("Token expired during background refresh");
-
-			// Don't navigate immediately as it would be jarring during background refresh
-			// Just mark error so next user interaction can handle it
-			error = true;
-			errorMessage = "Your session has expired. Please log in again.";
-			await InvokeAsync(StateHasChanged);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error refreshing data: {ex.Message}");
-			// Don't set error state here to avoid disrupting the UI during background refresh
-		}
-	}
-
-	private async void ChangeTab(DashboardTab tab)
-	{
-		if (currentTab != tab)
-		{
-			currentTab = tab;
-			await LoadData();
-		}
-	}
-
-	private async Task ChangeTimeRange(string timeRange)
-	{
-		if (selectedTimeRange != timeRange)
-		{
-			selectedTimeRange = timeRange;
-			if (currentTab == DashboardTab.TopTracks)
-			{
-				await LoadData();
-			}
-		}
-	}
-
-	private async Task RetryLoad()
-	{
-		error = false;
-		await LoadData();
-	}
-
-	// Helper methods
-	private string GetTabTitle()
-	{
-		return currentTab switch
-		{
-			DashboardTab.TopTracks => "Your Top Tracks",
-			DashboardTab.NowPlaying => "Now Playing",
-			_ => "Dashboard",
-		};
-	}
-
-	private string GetProgressPercentage()
-	{
-		if (currentlyPlaying == null)
-			return "0";
-
-		if (currentlyPlaying.Duration.TotalMilliseconds == 0)
-			return "0";
-
-		var percentage = (currentlyPlaying.Progress.TotalMilliseconds / currentlyPlaying.Duration.TotalMilliseconds) * 100;
-		return percentage.ToString("0.00");
-	}
-
-	private void Logout()
-	{
-		try
-		{
-			AuthService.LogoutAsync();
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error during logout: {ex.Message}");
-			// Fallback to manual navigation if logout fails
-			Navigation.NavigateTo("/");
-		}
-	}
-
-	private async Task<bool> CheckAuthentication()
-	{
-		try
-		{
-			Console.WriteLine("Dashboard: Calling AuthService.IsUserAuthenticated()");
-			var isAuthenticated = await AuthService.IsUserAuthenticated();
-			Console.WriteLine($"Dashboard: AuthService.IsUserAuthenticated returned {isAuthenticated}");
-			return isAuthenticated;
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Dashboard: Error in AuthService.IsUserAuthenticated: {ex.Message}");
-
-			// Fallback: Check token directly
-			var token = await LocalStorage.GetItemAsync<string>("spotify_access_token");
-			var hasToken = !string.IsNullOrEmpty(token);
-			Console.WriteLine($"Dashboard: Fallback check - has token: {hasToken}");
-			return hasToken;
-		}
-	}
-
-	public void Dispose()
-	{
-		// Clean up the timer
-		refreshTimer?.Dispose();
-	}
+    private string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        return $"{(int)timeSpan.TotalMinutes}:{timeSpan.Seconds:00}";
+    }
 }
