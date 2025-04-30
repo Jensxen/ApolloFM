@@ -1,33 +1,28 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
-using System;
-using System.Threading.Tasks;
 
-namespace FM.Application.Services
+public static class AuthHelpers
 {
-    public static class AuthHelpers
+    private static AuthenticationStateProvider _authStateProvider;
+
+    // Initialiser AuthHelpers med en AuthenticationStateProvider
+    public static void Initialize(AuthenticationStateProvider authStateProvider)
     {
-        private static AuthenticationStateProvider _authStateProvider;
+        _authStateProvider = authStateProvider;
+    }
 
-        // Initialiser AuthHelpers med en AuthenticationStateProvider
-        public static void Initialize(AuthenticationStateProvider authStateProvider)
+    // Force en opdatering af authentication state
+    [JSInvokable("ForceAuthenticationStateRefresh")]
+    public static void ForceAuthenticationStateRefresh()
+    {
+        if (_authStateProvider is SpotifyAuthenticationStateProvider spotifyAuth)
         {
-            _authStateProvider = authStateProvider;
+            Console.WriteLine("AuthHelpers: Forcing authentication state refresh");
+            spotifyAuth.TriggerAuthenticationStateChanged();
         }
-
-        // Force en opdatering af authentication state
-        [JSInvokable("ForceAuthenticationStateRefresh")]
-        public static async Task ForceAuthenticationStateRefresh()
+        else
         {
-            if (_authStateProvider is SpotifyAuthenticationStateProvider spotifyAuth)
-            {
-                Console.WriteLine("AuthHelpers: Forcing authentication state refresh");
-                await spotifyAuth.NotifyAuthenticationStateChanged();
-            }
-            else
-            {
-                Console.WriteLine("AuthHelpers: AuthenticationStateProvider is not SpotifyAuthenticationStateProvider");
-            }
+            Console.WriteLine("AuthHelpers: AuthenticationStateProvider is not SpotifyAuthenticationStateProvider");
         }
     }
 }

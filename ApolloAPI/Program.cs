@@ -19,7 +19,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
+builder.Services.AddHttpClient<SpotifyService>();
+builder.Services.AddScoped<TokenService>();
 
 
 builder.Services.AddDistributedMemoryCache(); // Kræves til sessionstorage

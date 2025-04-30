@@ -1,45 +1,30 @@
-﻿@page "/authentication/login-callback"
-@inject IJSRuntime JSRuntime
+﻿@using FM.Application.Services
+@inject TokenService TokenService
 @inject NavigationManager Navigation
-
-<div class="text-center p-4">
-    <h3>Logging you in...</h3>
-    <div class="spinner-border" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-</div>
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await JSRuntime.InvokeVoidAsync("console.log", "LoginCallback reached");
-
         try
         {
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-            await JSRuntime.InvokeVoidAsync("console.log", "URL:", uri.ToString());
-
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
             var token = query["access_token"];
+            var expiresIn = int.Parse(query["expires_in"] ?? "3600");
 
             if (!string.IsNullOrEmpty(token))
             {
-                // sessionStorage
-                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "spotify_access_token", token);
-                await JSRuntime.InvokeVoidAsync("console.log", "Token stored directly via JS");
-
-                //dashboard
+                TokenService.SetAccessToken(token, expiresIn);
                 Navigation.NavigateTo("/dashboard", forceLoad: true);
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("console.error", "No token in URL");
                 Navigation.NavigateTo("/", forceLoad: true);
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error:", ex.Message);
+            Console.WriteLine($"Error in LoginCallback: {ex.Message}");
             Navigation.NavigateTo("/", forceLoad: true);
         }
     }

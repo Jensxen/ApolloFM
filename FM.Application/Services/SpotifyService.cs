@@ -2,36 +2,78 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace FM.Application.Services
 {
     public class SpotifyService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<SpotifyService> _logger;
 
-        public SpotifyService(HttpClient httpClient)
+        public SpotifyService(HttpClient httpClient, ILogger<SpotifyService> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
 
             if (_httpClient.BaseAddress == null)
             {
                 _httpClient.BaseAddress = new Uri("https://api.spotify.com/v1/");
-                Console.WriteLine("Fallback BaseAddress applied: https://api.spotify.com/v1/");
+                _logger.LogInformation("Fallback BaseAddress applied: https://api.spotify.com/v1/");
             }
 
-            Console.WriteLine($"BaseAddress: {_httpClient.BaseAddress}");
+            _logger.LogInformation($"BaseAddress: {_httpClient.BaseAddress}");
         }
+
+
+        public async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(string code, string clientId, string clientSecret, string redirectUri)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
+                var content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "grant_type", "authorization_code" },
+                    { "code", code },
+                    { "redirect_uri", redirectUri }
+                });
+
+                var response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Spotify token exchange failed: {StatusCode}, {Content}", response.StatusCode, responseContent);
+                    return null;
+                }
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<SpotifyTokenResponse>(responseContent, options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exchanging code for token");
+                return null;
+            }
+        }
+
+
 
 
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string accessToken, string timeRange = "short_term", int limit = 25)
         {
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                new AuthenticationHeaderValue("Bearer", accessToken);
 
-            Console.WriteLine($"Request URI: {_httpClient.BaseAddress}me/top/tracks?time_range={timeRange}&limit={limit}");
+            _logger.LogInformation($"Request URI: {_httpClient.BaseAddress}me/top/tracks?time_range={timeRange}&limit={limit}");
 
             var response = await _httpClient.GetAsync($"me/top/tracks?time_range={timeRange}&limit={limit}");
             response.EnsureSuccessStatusCode();
@@ -61,7 +103,7 @@ namespace FM.Application.Services
         public async Task<SpotifyDataDTO?> GetCurrentlyPlayingTrackAsync(string accessToken)
         {
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                new AuthenticationHeaderValue("Bearer", accessToken);
 
             var response = await _httpClient.GetAsync("me/player/currently-playing");
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
@@ -93,19 +135,51 @@ namespace FM.Application.Services
             };
         }
 
-
-
-
-
         public async Task<string> GetUserProfileAsync(string accessToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            var response = await _httpClient.GetAsync("me"); // Use relative URI
+            var response = await _httpClient.GetAsync("me");
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadAsStringAsync();
         }
+
+        public async Task<SpotifyTokenResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
+                var content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "grant_type", "refresh_token" },
+                    { "refresh_token", refreshToken }
+                });
+
+                _logger.LogInformation("Attempting to refresh access token");
+
+                var response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Spotify token refresh failed: {StatusCode}, {Content}", response.StatusCode, responseContent);
+                    return null;
+                }
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<SpotifyTokenResponse>(responseContent, options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing access token");
+                return null;
+            }
+        }
+
     }
 }

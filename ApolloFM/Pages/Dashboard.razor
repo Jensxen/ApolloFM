@@ -189,25 +189,20 @@
 
 			if (!isAuthenticated)
 			{
-				// Check if we have a token but authentication state isn't set
 				var token = await LocalStorage.GetItemAsync<string>("spotify_access_token");
 				if (!string.IsNullOrEmpty(token))
 				{
-					// Try to manually authenticate
-					Console.WriteLine("Dashboard: Has token but not authenticated. Trying manual authentication.");
 					try
 					{
 						var spotifyAuthProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
 						await spotifyAuthProvider.MarkUserAsAuthenticated(token);
 
-						// Check authentication state again
 						authState = await AuthStateProvider.GetAuthenticationStateAsync();
 						isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-						Console.WriteLine($"Dashboard: After manual auth, IsAuthenticated = {isAuthenticated}");
 
 						if (!isAuthenticated)
 						{
-							// If still not authenticated, redirect
+							Console.WriteLine("Dashboard: Manual authentication failed. Redirecting to login.");
 							Navigation.NavigateTo("/");
 							return;
 						}
@@ -215,18 +210,18 @@
 					catch (Exception ex)
 					{
 						Console.WriteLine($"Dashboard: Error during manual authentication: {ex.Message}");
-						// Redirect to login if manual authentication fails
 						Navigation.NavigateTo("/");
 						return;
 					}
 				}
 				else
 				{
-					// No token, redirect to login
+					Console.WriteLine("Dashboard: No token found. Redirecting to login.");
 					Navigation.NavigateTo("/");
 					return;
 				}
 			}
+
 
 			// Get user profile
 			try

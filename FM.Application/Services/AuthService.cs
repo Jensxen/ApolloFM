@@ -1,10 +1,7 @@
-﻿using Blazored.LocalStorage;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
-using System.Net.Http.Json;
 using FM.Application.Services.ServiceDTO;
-using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
 
 namespace FM.Application.Services
 {
@@ -13,41 +10,43 @@ namespace FM.Application.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly NavigationManager _navigationManager;
-        private readonly ILocalStorageService _localStorage;
-        private readonly bool _isBlazorContext;
+        private readonly TokenService _tokenService;
 
-        // Opdateret konstruktør uden tokenProvider
-        [ActivatorUtilitiesConstructor]
         public AuthService(
             IHttpClientFactory httpClientFactory,
             AuthenticationStateProvider authStateProvider,
             NavigationManager navigationManager,
-            ILocalStorageService localStorage)
+            TokenService tokenService)
         {
             _httpClientFactory = httpClientFactory;
             _authStateProvider = authStateProvider;
             _navigationManager = navigationManager;
-            _localStorage = localStorage;
-            _isBlazorContext = true;
-        }
-
-        // API Constructor (not used in this implementation)
-        public AuthService(HttpClient httpClient)
-        {
-            _httpClientFactory = null;
-            _authStateProvider = null;
-            _navigationManager = null;
-            _localStorage = null;
-            _isBlazorContext = false;
+            _tokenService = tokenService;
         }
 
         public async Task<bool> IsUserAuthenticated()
         {
-            if (!_isBlazorContext)
-                throw new InvalidOperationException("This method is only available in Blazor context.");
+            var token = _tokenService.GetAccessToken();
+            return !string.IsNullOrEmpty(token);
+        }
 
-            var authState = await _authStateProvider.GetAuthenticationStateAsync();
-            return authState.User.Identity?.IsAuthenticated ?? false;
+        public async Task Logout()
+        {
+            _tokenService.ClearAccessToken();
+            _navigationManager.NavigateTo("/");
+        }
+
+        private async Task EnsureTokenInHeaderAsync(HttpClient client)
+        {
+            var token = _tokenService.GetAccessToken();
+
+            if (string.IsNullOrEmpty(token))
+            {
+                throw new Exception("No access token available");
+            }
+
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
 
         public async Task<SpotifyUserProfile> GetUserProfile()
@@ -64,20 +63,6 @@ namespace FM.Application.Services
                 return null;
             }
         }
-
-        public async Task Logout()
-        {
-            if (!_isBlazorContext)
-                throw new InvalidOperationException("This method is only available in Blazor context.");
-
-            // Fjern token fra localStorage direkte i stedet for at gå gennem AuthStateProvider
-            await _localStorage.RemoveItemAsync("spotify_access_token");
-
-            // Naviger til forsiden
-            _navigationManager.NavigateTo("/");
-        }
-
-
 
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string timeRange = "medium_term")
         {
@@ -100,8 +85,7 @@ namespace FM.Application.Services
             {
                 var http = _httpClientFactory.CreateClient("ApolloAPI");
                 await EnsureTokenInHeaderAsync(http);
-                var response = await http.GetFromJsonAsync<SpotifyDataDTO>("api/auth/currently-playing");
-                return response;
+                return await http.GetFromJsonAsync<SpotifyDataDTO>("api/auth/currently-playing");
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
@@ -115,26 +99,6 @@ namespace FM.Application.Services
             }
         }
 
-        // Helper method to ensure token is in the header
-        private async Task EnsureTokenInHeaderAsync(HttpClient client)
-        {
-            if (!_isBlazorContext)
-                return;
-
-
-            var token = await _localStorage.GetItemAsync<string>("spotify_access_token");
-
-            if (string.IsNullOrEmpty(token))
-            {
-                throw new Exception("No access token available");
-            }
-
-            // Set the Authorization header
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-        }
-
-        // I FM.Application/Services/AuthService.cs
         public void Login(NavigationManager navigationManager, bool useDirectMethod = false)
         {
             var apiUrl = "https://localhost:7043"; // Kan evt. gemmes i konfiguration
@@ -157,6 +121,7 @@ namespace FM.Application.Services
             Console.WriteLine($"AuthService: Navigating to {loginUrl}");
             navigationManager.NavigateTo(loginUrl, forceLoad: true);
         }
+
 
     }
 }

@@ -7,6 +7,8 @@ using Blazored.LocalStorage;
 using FM.Application;
 using FM.Application.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -57,16 +59,17 @@ builder.Services.AddHttpClient("ApolloAPI", client =>
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 // Register custom AuthenticationStateProvider
-builder.Services.AddScoped<SpotifyAuthenticationStateProvider>(sp => 
+builder.Services.AddScoped<SpotifyAuthenticationStateProvider>(sp =>
 {
-    var localStorage = sp.GetRequiredService<ILocalStorageService>();
+    var jsRuntime = sp.GetRequiredService<IJSRuntime>();
     var nav = sp.GetRequiredService<NavigationManager>();
-    return new SpotifyAuthenticationStateProvider(localStorage, nav);
+    return new SpotifyAuthenticationStateProvider(jsRuntime, nav);
 });
 
-builder.Services.AddScoped<AuthenticationStateProvider>(sp => 
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<SpotifyAuthenticationStateProvider>());
 
+builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddApplicationServices(isApiContext: false, registerAuthenticationProvider: false);
 
@@ -75,14 +78,15 @@ builder.Services.AddScoped<AuthService>(provider =>
     var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
     var navigationManager = provider.GetRequiredService<NavigationManager>();
-    var localStorage = provider.GetRequiredService<ILocalStorageService>();
+    var tokenService = provider.GetRequiredService<TokenService>();
     
     return new AuthService(
         httpClientFactory, 
         authStateProvider, 
         navigationManager, 
-        localStorage);
+        tokenService);
 });
+
 
 // Build and run the host
 var host = builder.Build();

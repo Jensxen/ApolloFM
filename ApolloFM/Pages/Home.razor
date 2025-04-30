@@ -1,14 +1,13 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
 @using FM.Application.Services
-@using Blazored.LocalStorage
 @using Microsoft.JSInterop
 @using System.Text.Json
 @implements IDisposable
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-@inject ILocalStorageService LocalStorage
+@inject TokenService TokenService
 @inject IJSRuntime JSRuntime
 
 <div class="homepage-container">
@@ -70,23 +69,14 @@
 		{
 			Console.WriteLine("Home: OnInitializedAsync started");
 
-			// First check if we have a token in sessionStorage
-			string token = null;
-
-			try
-			{
-				token = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "spotify_access_token");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Error reading from sessionStorage: {ex.Message}");
-			}
+			// Hent token fra TokenService
+			var token = TokenService.GetAccessToken();
 
 			if (!string.IsNullOrEmpty(token))
 			{
 				try
 				{
-					// Token exists, try to authenticate with it
+					// Autentificer bruger med token
 					var authProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
 					await authProvider.MarkUserAsAuthenticated(token);
 					Console.WriteLine("User authenticated with stored token");
@@ -97,63 +87,23 @@
 				}
 			}
 
-			// Check if user is authenticated
-			try
-			{
-				isLoggedIn = await AuthService.IsUserAuthenticated();
-				Console.WriteLine($"User is authenticated: {isLoggedIn}");
-
-				if (isLoggedIn)
-				{
-					try
-					{
-						var profile = await AuthService.GetUserProfile();
-						userName = profile?.DisplayName ?? "Spotify User";
-						Console.WriteLine($"Got user profile: {userName}");
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine($"Error getting profile: {ex.Message}");
-						userName = "Spotify User";
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Error checking authentication: {ex.Message}");
-				isLoggedIn = false;
-			}
-
-			Console.WriteLine("Home: OnInitializedAsync completed");
+			// Tjek om brugeren er logget ind
+			isLoggedIn = await AuthService.IsUserAuthenticated();
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Unhandled error in OnInitializedAsync: {ex.Message}\n{ex.StackTrace}");
-			authError = true;
-			errorMessage = "Error during initialization. Please refresh the page and try again.";
+			Console.WriteLine($"Unhandled error in OnInitializedAsync: {ex.Message}");
 		}
 		finally
 		{
 			isLoading = false;
 		}
-
-		// Subscribe to the AuthenticationStateChanged event
-		try
-		{
-			AuthStateProvider.AuthenticationStateChanged += AuthenticationStateChangedHandler;
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error subscribing to auth state changes: {ex.Message}");
-		}
 	}
-
 
 	private async Task Login()
 	{
 		try
 		{
-			// DIREKTE IMPLEMENTERING - MEGET SIMPEL TILGANG
 			Console.WriteLine("Attempting direct login with simplified approach");
 
 			// API URL
@@ -200,9 +150,9 @@
 
 			if (!string.IsNullOrEmpty(tokenResponse?.AccessToken))
 			{
-				// Gem token i localStorage
-				await LocalStorage.SetItemAsync("spotify_access_token", tokenResponse.AccessToken);
-				Console.WriteLine("Token stored in localStorage");
+				// Gem token i TokenService
+				TokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
+				Console.WriteLine("Token stored in TokenService");
 
 				// Opdater authentication state
 				if (AuthStateProvider is SpotifyAuthenticationStateProvider spotifyAuth)
@@ -250,7 +200,6 @@
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Error during logout: {ex.Message}");
-			// Show error message or handle gracefully
 		}
 	}
 
@@ -288,8 +237,6 @@
 		}
 	}
 
-
-
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)
@@ -308,7 +255,6 @@
 			catch (Exception ex)
 			{
 				Console.WriteLine($"JS Interop error: {ex.Message}");
-				// Suppress the error and continue
 			}
 		}
 	}
@@ -326,4 +272,3 @@
 		}
 	}
 }
-

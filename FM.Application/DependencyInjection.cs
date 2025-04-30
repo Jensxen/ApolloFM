@@ -33,11 +33,10 @@ namespace FM.Application
            
             // Services
             services.AddScoped<SpotifyService>();
+         
 
             if (!isApiContext)
             {
-                services.AddBlazoredLocalStorage();
-
                 if (registerAuthenticationProvider)
                 {
                     services.AddScoped<SpotifyAuthenticationStateProvider>();
