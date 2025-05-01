@@ -6,126 +6,129 @@
 @inject IJSRuntime JSRuntime
 
 <div class="dashboard-container">
-    <h1>Your Spotify Dashboard</h1>
+	<h1>Your Spotify Dashboard</h1>
 
-    @if (isLoading)
-    {
-        <div class="spinner-container">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    }
-    else if (hasError)
-    {
-        <div class="alert alert-danger">
-            <p>@errorMessage</p>
-            <button class="btn btn-primary" @onclick="RetryLoading">Retry</button>
-        </div>
-    }
-    else
-    {
-        @* Dashboard content *@
-    }
+	@if (isLoading)
+	{
+		<div class="spinner-container">
+			<div class="spinner-border text-primary" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	}
+	else if (hasError)
+	{
+		<div class="alert alert-danger">
+			<p>@errorMessage</p>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" @onclick="RetryLoading">Retry</button>
+				<button class="btn btn-success" @onclick="Login">Login to Spotify</button>
+			</div>
+		</div>
+	}
+	else
+	{
+		@* Dashboard content *@
+	}
 </div>
 
 @code {
-    private bool isLoading = true;
-    private bool hasError = false;
-    private string errorMessage = "";
-    private SpotifyUserProfile userProfile;
-    private List<SpotifyDataDTO> topTracks;
-    private SpotifyDataDTO currentlyPlaying;
+	private bool isLoading = true;
+	private bool hasError = false;
+	private string errorMessage = "";
+	private SpotifyUserProfile userProfile;
+	private List<SpotifyDataDTO> topTracks;
+	private SpotifyDataDTO currentlyPlaying;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CheckAuthAndLoadData();
-    }
+	protected override async Task OnInitializedAsync()
+	{
+		await CheckAuthAndLoadData();
+	}
 
-    private async Task CheckAuthAndLoadData()
-    {
-        isLoading = true;
-        hasError = false;
+	private async Task CheckAuthAndLoadData()
+	{
+		isLoading = true;
+		hasError = false;
 
-        try
-        {
-            // Check authentication first
-            bool isAuthenticated = await AuthService.IsUserAuthenticated();
-            await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
+		try
+		{
+			// Check authentication first
+			bool isAuthenticated = await AuthService.IsUserAuthenticated();
+			await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
 
-            if (!isAuthenticated)
-            {
-                hasError = true;
-                errorMessage = "You need to login to Spotify to access this dashboard.";
-                isLoading = false;
-                return;
-            }
+			if (!isAuthenticated)
+			{
+				hasError = true;
+				errorMessage = "You need to login to Spotify to access this dashboard.";
+				isLoading = false;
+				return;
+			}
 
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            hasError = true;
-            errorMessage = $"Authentication check failed: {ex.Message}";
-            await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
+			await LoadData();
+		}
+		catch (Exception ex)
+		{
+			hasError = true;
+			errorMessage = $"Authentication check failed: {ex.Message}";
+			await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
 
-    private async Task LoadData()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Loading data");
+	private async Task LoadData()
+	{
+		try
+		{
+			await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Loading data");
 
-            // Load user profile
-            userProfile = await AuthService.GetUserProfile();
+			// Load user profile
+			userProfile = await AuthService.GetUserProfile();
 
-            // Load top tracks
-            topTracks = await AuthService.GetTopTracksAsync();
+			// Load top tracks
+			topTracks = await AuthService.GetTopTracksAsync();
 
-            // Load currently playing
-            currentlyPlaying = await AuthService.GetCurrentlyPlayingTrackAsync();
+			// Load currently playing
+			currentlyPlaying = await AuthService.GetCurrentlyPlayingTrackAsync();
 
-            await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Data loaded successfully");
-        }
-        catch (Exception ex)
-        {
-            hasError = true;
-            errorMessage = "Failed to load Spotify data. Please try again.";
-            await JSRuntime.InvokeVoidAsync("console.error", "Dashboard error:", ex.Message);
-        }
-    }
+			await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Data loaded successfully");
+		}
+		catch (Exception ex)
+		{
+			hasError = true;
+			errorMessage = "Failed to load Spotify data. Please try again.";
+			await JSRuntime.InvokeVoidAsync("console.error", "Dashboard error:", ex.Message);
+		}
+	}
 
-    private async Task RetryLoading()
-    {
-        await LoadData();
-    }
+	private async Task RetryLoading()
+	{
+		await LoadData();
+	}
 
-    private async Task Login()
-    {
-        await AuthService.LoginAsync();
-    }
+	private async Task Login()
+	{
+		await AuthService.LoginAsync();
+	}
 
-    private async Task Logout()
-    {
-        try
-        {
-            await AuthService.LogoutAsync();
-            NavigationManager.NavigateTo("/");
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("console.error", "Logout error:", ex.Message);
-        }
-    }
+	private async Task Logout()
+	{
+		try
+		{
+			await AuthService.LogoutAsync();
+			NavigationManager.NavigateTo("/");
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", "Logout error:", ex.Message);
+		}
+	}
 
-    private string FormatTimeSpan(TimeSpan timeSpan)
-    {
-        return $"{(int)timeSpan.TotalMinutes}:{timeSpan.Seconds:00}";
-    }
+	private string FormatTimeSpan(TimeSpan timeSpan)
+	{
+		return $"{(int)timeSpan.TotalMinutes}:{timeSpan.Seconds:00}";
+	}
 }

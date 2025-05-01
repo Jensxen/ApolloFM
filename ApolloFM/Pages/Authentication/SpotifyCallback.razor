@@ -1,7 +1,7 @@
 ﻿@page "/spotify-callback"
 @using Microsoft.AspNetCore.WebUtilities
-@using FM.Application.Services;
-@using System.Web
+@using FM.Application.Services
+@using Microsoft.Extensions.Primitives
 @inject NavigationManager NavigationManager
 @inject AuthService AuthService
 @inject IJSRuntime JSRuntime
@@ -21,18 +21,51 @@
     {
         try
         {
+            await JSRuntime.InvokeVoidAsync("console.log", "Spotify callback component initialized");
+
             var uri = new Uri(NavigationManager.Uri);
             var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-            if (queryParams.TryGetValue("code", out var code))
+            // Log all query parameters for debugging
+            foreach (var param in queryParams)
             {
-                await JSRuntime.InvokeVoidAsync("console.log", "Handling Spotify callback with code:", code);
+                await JSRuntime.InvokeVoidAsync("console.log", $"Query param: {param.Key} = {param.Value}");
+            }
+
+            // Get stored state from localStorage
+            var storedState = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "spotify_auth_state");
+            await JSRuntime.InvokeVoidAsync("console.log", $"Retrieved stored state: {storedState}");
+
+            // Get state from URL if present
+            string urlState = null;
+            if (queryParams.TryGetValue("state", out var stateValue) && !string.IsNullOrEmpty(stateValue))
+            {
+                urlState = stateValue.ToString();
+                await JSRuntime.InvokeVoidAsync("console.log", $"URL contains state: {urlState}");
+
+                // Skip state validation if debugging
+                if (!string.IsNullOrEmpty(storedState) && storedState != urlState)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.warn", "State mismatch - stored:", storedState, "url:", urlState);
+                    // In production, you might want to redirect to an error page here
+                    // For now, we'll continue with the code to aid debugging
+                }
+            }
+
+            // Clear the stored state as it's been used
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "spotify_auth_state");
+
+            if (queryParams.TryGetValue("code", out var codeValues) && !string.IsNullOrEmpty(codeValues))
+            {
+                string code = codeValues.ToString();
+                await JSRuntime.InvokeVoidAsync("console.log", $"Found auth code: {code.Substring(0, Math.Min(10, code.Length))}...");
                 await AuthService.HandleCallback(code);
             }
-            else if (queryParams.TryGetValue("error", out var error))
+            else if (queryParams.TryGetValue("error", out var errorValues) && !string.IsNullOrEmpty(errorValues))
             {
+                string error = errorValues.ToString();
                 await JSRuntime.InvokeVoidAsync("console.error", "Spotify auth error:", error);
-                NavigationManager.NavigateTo($"/?error={error}");
+                NavigationManager.NavigateTo($"/?error={Uri.EscapeDataString(error)}");
             }
             else
             {
@@ -47,3 +80,4 @@
         }
     }
 }
+

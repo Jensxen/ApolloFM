@@ -16,40 +16,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Add auth to the application
 builder.Services.AddAuthorizationCore();
 
-// Add OIDC authentication
-//builder.Services.AddOidcAuthentication(options =>
-//{
-//    builder.Configuration.Bind("OidcProviderOptions", options.ProviderOptions);
-//    options.ProviderOptions.Authority = "https://accounts.spotify.com";
-//    options.ProviderOptions.ClientId = "824cb0e5e1d549c683c642d9c9ae062b";
-//    options.ProviderOptions.ResponseType = "code";
-//    options.ProviderOptions.DefaultScopes.Add("user-read-email");
-//    options.ProviderOptions.DefaultScopes.Add("user-read-private");
-//    options.ProviderOptions.DefaultScopes.Add("user-top-read");
-//    options.ProviderOptions.DefaultScopes.Add("user-read-currently-playing");
-//    options.ProviderOptions.RedirectUri = builder.HostEnvironment.BaseAddress + "authentication/login-callback";
-//    options.UserOptions.RoleClaim = "role"; // Tilføj dette, hvis du bruger roller
-//});
-
-// Register AuthorizationMessageHandler
-//builder.Services.AddScoped<AuthorizationMessageHandler>();
-
-// Check if Dashboard component is correctly registered
-var pages = System.Reflection.Assembly.GetExecutingAssembly()
-    .GetTypes()
-    .Where(t => t.GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.RouteAttribute), true).Length > 0);
-
-Console.WriteLine("Registered pages:");
-foreach (var page in pages)
-{
-    var routeAttributes = page.GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.RouteAttribute), true);
-    foreach (Microsoft.AspNetCore.Components.RouteAttribute attr in routeAttributes)
-    {
-        Console.WriteLine($"- {page.Name}: {attr.Template}");
-    }
-}
-
-
 // Configure HttpClient for Spotify API
 builder.Services.AddHttpClient("SpotifyAPI", client =>
 {
@@ -86,12 +52,14 @@ builder.Services.AddScoped<AuthService>(provider =>
     var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
     var navigationManager = provider.GetRequiredService<NavigationManager>();
     var tokenService = provider.GetRequiredService<TokenService>();
-    
+    var jsRuntime = provider.GetRequiredService<IJSRuntime>();
+
     return new AuthService(
         httpClientFactory, 
         authStateProvider, 
         navigationManager, 
-        tokenService);
+        tokenService,
+        jsRuntime);
 });
 
 // Add this line to set up the JS interop

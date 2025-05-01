@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using FM.Application.Services.ServiceDTO;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
+using Microsoft.JSInterop;
 
 namespace FM.Application.Services
 {
@@ -12,17 +13,20 @@ namespace FM.Application.Services
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly NavigationManager _navigationManager;
         private readonly TokenService _tokenService;
+        private readonly IJSRuntime _jsRuntime;
 
         public AuthService(
             IHttpClientFactory httpClientFactory,
             AuthenticationStateProvider authStateProvider,
             NavigationManager navigationManager,
-            TokenService tokenService)
+            TokenService tokenService,
+            IJSRuntime jsRuntime)
         {
             _httpClientFactory = httpClientFactory;
             _authStateProvider = authStateProvider;
             _navigationManager = navigationManager;
             _tokenService = tokenService;
+            _jsRuntime = jsRuntime;
         }
 
         public async Task<bool> IsUserAuthenticated()
@@ -96,33 +100,51 @@ namespace FM.Application.Services
             {
                 var apiUrl = "https://localhost:7043"; // Your API URL
 
-                // Get the current URL to return to after login
-                var returnUrl = $"{_navigationManager.BaseUri}dashboard";
+                // Generate a state value for security
+                var state = Guid.NewGuid().ToString();
 
-                // Redirect to API login endpoint with return URL
-                var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
+                // Store it in localStorage for validation later
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "spotify_auth_state", state);
+
+                // This should be the Blazor app's spotify-callback component URL
+                var redirectUri = $"{_navigationManager.BaseUri}spotify-callback";
+
+                // Use the client app's callback component and pass state
+                var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(state)}";
+
+                Console.WriteLine($"Redirecting to login URL: {loginUrl}");
                 _navigationManager.NavigateTo(loginUrl, forceLoad: true);
-
-                // No return value needed for Task
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Login error: {ex.Message}");
-                throw; // Re-throw the exception so caller knows login failed
+                throw;
             }
         }
-
 
 
         public async Task HandleCallback(string code)
         {
             try
             {
+                if (string.IsNullOrEmpty(code))
+                {
+                    Console.Error.WriteLine("Cannot handle callback: authorization code is empty");
+                    _navigationManager.NavigateTo("/?error=missing_code");
+                    return;
+                }
+
+                // Log the code we're using
+                Console.WriteLine($"Handling callback with code: {code.Substring(0, Math.Min(10, code.Length))}...");
+
                 // Create client for API requests
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                // Get token from API
-                var response = await client.GetFromJsonAsync<TokenResponse>($"api/auth/handle-state-error?code={Uri.EscapeDataString(code)}");
+                // Get token from API - ensure the code parameter is properly passed
+                var url = $"api/auth/handle-state-error?code={Uri.EscapeDataString(code)}";
+                Console.WriteLine($"Making request to: {url}");
+
+                var response = await client.GetFromJsonAsync<TokenResponse>(url);
 
                 if (response != null && !string.IsNullOrEmpty(response.AccessToken))
                 {
@@ -159,26 +181,51 @@ namespace FM.Application.Services
         }
 
 
+
+
         private async Task<T> GetApiDataAsync<T>(string endpoint)
         {
-            // Get a valid access token (with automatic refresh if needed)
-            var token = await GetValidAccessTokenAsync();
-
-            if (string.IsNullOrEmpty(token))
+            try
             {
-                throw new UnauthorizedAccessException("No access token available");
+                // Get a valid access token (with automatic refresh if needed)
+                var token = await GetValidAccessTokenAsync();
+
+                await _jsRuntime.InvokeVoidAsync("console.log",
+                    $"Making API request to {endpoint} with token: {(token != null ? $"{token.Substring(0, 10)}..." : "null")}");
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    throw new UnauthorizedAccessException("No access token available");
+                }
+
+                var client = _httpClientFactory.CreateClient("ApolloAPI");
+
+                // Add the authorization header
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // Log the headers for debugging
+                await _jsRuntime.InvokeVoidAsync("console.log",
+                    "Authorization header set: " + client.DefaultRequestHeaders.Authorization?.ToString());
+
+                var response = await client.GetAsync(endpoint);
+
+                // Log response status
+                await _jsRuntime.InvokeVoidAsync("console.log",
+                    $"API response: {(int)response.StatusCode} {response.StatusCode}");
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadFromJsonAsync<T>();
             }
-
-            var client = _httpClientFactory.CreateClient("ApolloAPI");
-
-            // Add the authorization header
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var response = await client.GetAsync(endpoint);
-            response.EnsureSuccessStatusCode();
-
-            return await response.Content.ReadFromJsonAsync<T>();
+            catch (Exception ex)
+            {
+                await _jsRuntime.InvokeVoidAsync("console.error", $"API request error on {endpoint}: {ex.Message}");
+                throw;
+            }
         }
+
+
+
 
 
         public async Task<string> GetValidAccessTokenAsync()
