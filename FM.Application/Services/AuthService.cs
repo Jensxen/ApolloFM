@@ -100,7 +100,7 @@ namespace FM.Application.Services
             {
                 var apiUrl = "https://localhost:7043"; // Your API URL
 
-                // Generate a state value for security
+                // Generate a random state value for security
                 var state = Guid.NewGuid().ToString();
 
                 // Store it in localStorage for validation later
@@ -110,7 +110,7 @@ namespace FM.Application.Services
                 var redirectUri = $"{_navigationManager.BaseUri}spotify-callback";
 
                 // Use the client app's callback component and pass state
-                var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(state)}";
+                var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(redirectUri)}&clientState={Uri.EscapeDataString(state)}";
 
                 Console.WriteLine($"Redirecting to login URL: {loginUrl}");
                 _navigationManager.NavigateTo(loginUrl, forceLoad: true);
@@ -121,6 +121,7 @@ namespace FM.Application.Services
                 throw;
             }
         }
+
 
 
         public async Task HandleCallback(string code)
@@ -140,37 +141,44 @@ namespace FM.Application.Services
                 // Create client for API requests
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                // Get token from API - ensure the code parameter is properly passed
-                var url = $"api/auth/handle-state-error?code={Uri.EscapeDataString(code)}";
-                Console.WriteLine($"Making request to: {url}");
+                // Send code in JSON body using POST
+                var responseMessage = await client.PostAsJsonAsync("api/auth/handle-state-error", new { code = code });
 
-                var response = await client.GetFromJsonAsync<TokenResponse>(url);
+                // Log the status
+                Console.WriteLine($"POST /api/auth/handle-state-error status: {(int)responseMessage.StatusCode} {responseMessage.StatusCode}");
 
-                if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+                if (responseMessage.IsSuccessStatusCode)
                 {
-                    // Store tokens
-                    _tokenService.SetAccessToken(response.AccessToken, response.ExpiresIn);
+                    var response = await responseMessage.Content.ReadFromJsonAsync<TokenResponse>();
 
-                    if (!string.IsNullOrEmpty(response.RefreshToken))
+                    if (response != null && !string.IsNullOrEmpty(response.AccessToken))
                     {
-                        _tokenService.SetRefreshToken(response.RefreshToken);
+                        // Store tokens
+                        _tokenService.SetAccessToken(response.AccessToken, response.ExpiresIn);
+
+                        if (!string.IsNullOrEmpty(response.RefreshToken))
+                        {
+                            _tokenService.SetRefreshToken(response.RefreshToken);
+                        }
+
+                        // Update auth state
+                        var authProvider = (SpotifyAuthenticationStateProvider)_authStateProvider;
+                        await authProvider.MarkUserAsAuthenticated(response.AccessToken);
+
+                        Console.WriteLine("Authentication successful, redirecting to dashboard...");
+
+                        _navigationManager.NavigateTo("/dashboard");
                     }
-
-                    // Update auth state
-                    var authProvider = (SpotifyAuthenticationStateProvider)_authStateProvider;
-                    await authProvider.MarkUserAsAuthenticated(response.AccessToken);
-
-                    // Add a console log for debugging
-                    Console.WriteLine("Authentication successful, redirecting to dashboard...");
-
-                    // Redirect to dashboard
-                    _navigationManager.NavigateTo("/dashboard");
+                    else
+                    {
+                        Console.Error.WriteLine("Failed to retrieve valid token from API response");
+                        _navigationManager.NavigateTo("/?error=invalid_token_response");
+                    }
                 }
                 else
                 {
-                    // Handle error
-                    Console.Error.WriteLine("Failed to retrieve token from API");
-                    _navigationManager.NavigateTo("/?error=token_retrieval_failed");
+                    Console.Error.WriteLine($"Token request failed: {responseMessage.StatusCode}");
+                    _navigationManager.NavigateTo("/?error=token_request_failed");
                 }
             }
             catch (Exception ex)
@@ -179,6 +187,7 @@ namespace FM.Application.Services
                 _navigationManager.NavigateTo("/?error=authentication_failed");
             }
         }
+
 
 
 
@@ -223,10 +232,6 @@ namespace FM.Application.Services
                 throw;
             }
         }
-
-
-
-
 
         public async Task<string> GetValidAccessTokenAsync()
         {

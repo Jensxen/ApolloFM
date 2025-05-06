@@ -6,129 +6,212 @@
 @inject IJSRuntime JSRuntime
 
 <div class="dashboard-container">
-	<h1>Your Spotify Dashboard</h1>
+    <h1>Your Spotify Dashboard</h1>
 
-	@if (isLoading)
-	{
-		<div class="spinner-container">
-			<div class="spinner-border text-primary" role="status">
-				<span class="visually-hidden">Loading...</span>
-			</div>
-		</div>
-	}
-	else if (hasError)
-	{
-		<div class="alert alert-danger">
-			<p>@errorMessage</p>
-			<div class="mt-3">
-				<button class="btn btn-primary me-2" @onclick="RetryLoading">Retry</button>
-				<button class="btn btn-success" @onclick="Login">Login to Spotify</button>
-			</div>
-		</div>
-	}
-	else
-	{
-		@* Dashboard content *@
-	}
+    @if (isLoading)
+    {
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (hasError)
+    {
+        <div class="alert alert-danger">
+            <p>@errorMessage</p>
+            <div class="mt-3">
+                <button class="btn btn-primary me-2" @onclick="RetryLoading">Retry</button>
+                <button class="btn btn-success" @onclick="Login">Login to Spotify</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div>
+            <!-- Top tracks section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">Your Top Tracks</h3>
+                        <div class="btn-group">
+                            <button class="btn @(selectedTimeRange == "short_term" ? "btn-primary" : "btn-outline-primary")"
+                                    @onclick="@(() => ChangeTimeRange("short_term"))">
+                                Last 4 Weeks
+                            </button>
+                            <button class="btn @(selectedTimeRange == "medium_term" ? "btn-primary" : "btn-outline-primary")"
+                                    @onclick="@(() => ChangeTimeRange("medium_term"))">
+                                Last 6 Months
+                            </button>
+                            <button class="btn @(selectedTimeRange == "long_term" ? "btn-primary" : "btn-outline-primary")"
+                                    @onclick="@(() => ChangeTimeRange("long_term"))">
+                                All Time
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (loadingTopTracks)
+                    {
+                        <div class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (topTracks != null && topTracks.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @for (int i = 0; i < topTracks.Count; i++)
+                            {
+                                var track = topTracks[i];
+                                var index = i;
+
+                                <div class="list-group-item d-flex align-items-center">
+                                    <div class="me-3 text-center" style="width: 30px;">
+                                        <span class="text-muted">@(index + 1)</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(track.AlbumImageUrl))
+                                    {
+                                        <img src="@track.AlbumImageUrl" alt="Album Cover" class="top-track-image me-3" />
+                                    }
+                                    <div>
+                                        <h5 class="mb-1">@track.SongName</h5>
+                                        <p class="mb-1">@track.Artist</p>
+                                        <small class="text-muted">@track.Album</small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        @if (!string.IsNullOrEmpty(track.SongUrl))
+                                        {
+                                            <a href="@track.SongUrl" target="_blank" class="btn btn-sm btn-outline-success">
+                                                <i class="fab fa-spotify me-1"></i> Play
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center p-4">
+                            <p class="text-muted">No top tracks found for this time period.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
+<style>
+    .dashboard-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .top-track-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    .spinner-container {
+        display: flex;
+        justify-content: center;
+        padding: 3rem 0;
+    }
+</style>
+
 @code {
-	private bool isLoading = true;
-	private bool hasError = false;
-	private string errorMessage = "";
-	private SpotifyUserProfile userProfile;
-	private List<SpotifyDataDTO> topTracks;
-	private SpotifyDataDTO currentlyPlaying;
+    private bool isLoading = true;
+    private bool hasError = false;
+    private string errorMessage = "";
+    private List<SpotifyDataDTO> topTracks;
 
-	protected override async Task OnInitializedAsync()
-	{
-		await CheckAuthAndLoadData();
-	}
+    // For top tracks filtering
+    private string selectedTimeRange = "medium_term";
+    private bool loadingTopTracks = false;
 
-	private async Task CheckAuthAndLoadData()
-	{
-		isLoading = true;
-		hasError = false;
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthAndLoadData();
+    }
 
-		try
-		{
-			// Check authentication first
-			bool isAuthenticated = await AuthService.IsUserAuthenticated();
-			await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
+    private async Task CheckAuthAndLoadData()
+    {
+        isLoading = true;
+        hasError = false;
 
-			if (!isAuthenticated)
-			{
-				hasError = true;
-				errorMessage = "You need to login to Spotify to access this dashboard.";
-				isLoading = false;
-				return;
-			}
+        try
+        {
+            // Check authentication first
+            bool isAuthenticated = await AuthService.IsUserAuthenticated();
+            await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
 
-			await LoadData();
-		}
-		catch (Exception ex)
-		{
-			hasError = true;
-			errorMessage = $"Authentication check failed: {ex.Message}";
-			await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
-		}
-		finally
-		{
-			isLoading = false;
-			StateHasChanged();
-		}
-	}
+            if (!isAuthenticated)
+            {
+                hasError = true;
+                errorMessage = "You need to login to Spotify to access this dashboard.";
+                isLoading = false;
+                return;
+            }
 
-	private async Task LoadData()
-	{
-		try
-		{
-			await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Loading data");
+            // Load just the top tracks data
+            await LoadTopTracks(selectedTimeRange);
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = $"Authentication check failed: {ex.Message}";
+            await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
 
-			// Load user profile
-			userProfile = await AuthService.GetUserProfile();
+    private async Task LoadTopTracks(string timeRange)
+    {
+        loadingTopTracks = true;
+        StateHasChanged();
 
-			// Load top tracks
-			topTracks = await AuthService.GetTopTracksAsync();
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", $"Loading top tracks for time range: {timeRange}");
+            topTracks = await AuthService.GetTopTracksAsync(timeRange);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error loading top tracks: {ex.Message}");
+            topTracks = new List<SpotifyDataDTO>();
+        }
+        finally
+        {
+            loadingTopTracks = false;
+            StateHasChanged();
+        }
+    }
 
-			// Load currently playing
-			currentlyPlaying = await AuthService.GetCurrentlyPlayingTrackAsync();
+    private async Task ChangeTimeRange(string timeRange)
+    {
+        if (selectedTimeRange == timeRange) return;
 
-			await JSRuntime.InvokeVoidAsync("console.log", "Dashboard: Data loaded successfully");
-		}
-		catch (Exception ex)
-		{
-			hasError = true;
-			errorMessage = "Failed to load Spotify data. Please try again.";
-			await JSRuntime.InvokeVoidAsync("console.error", "Dashboard error:", ex.Message);
-		}
-	}
+        selectedTimeRange = timeRange;
+        await LoadTopTracks(timeRange);
+    }
 
-	private async Task RetryLoading()
-	{
-		await LoadData();
-	}
+    private async Task RetryLoading()
+    {
+        await LoadTopTracks(selectedTimeRange);
+    }
 
-	private async Task Login()
-	{
-		await AuthService.LoginAsync();
-	}
-
-	private async Task Logout()
-	{
-		try
-		{
-			await AuthService.LogoutAsync();
-			NavigationManager.NavigateTo("/");
-		}
-		catch (Exception ex)
-		{
-			await JSRuntime.InvokeVoidAsync("console.error", "Logout error:", ex.Message);
-		}
-	}
-
-	private string FormatTimeSpan(TimeSpan timeSpan)
-	{
-		return $"{(int)timeSpan.TotalMinutes}:{timeSpan.Seconds:00}";
-	}
+    private async Task Login()
+    {
+        await AuthService.LoginAsync();
+    }
 }

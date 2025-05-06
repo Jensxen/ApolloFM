@@ -53,23 +53,11 @@
         }
     }
 
-    private void LoginWithSpotify()
+    private async Task LoginWithSpotify()
     {
         try
         {
-            // Simplified login with direct redirect to Spotify
-            var clientId = "824cb0e5e1d549c683c642d9c9ae062b";
-            var apiUrl = "https://localhost:7043";
-            var redirectUri = $"{apiUrl}/api/auth/handle-state-error";
-            var scopes = "user-read-email user-read-private user-top-read user-read-currently-playing";
-
-            var spotifyUrl = $"https://accounts.spotify.com/authorize" +
-                          $"?client_id={Uri.EscapeDataString(clientId)}" +
-                          $"&response_type=code" +
-                          $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-                          $"&scope={Uri.EscapeDataString(scopes)}";
-
-            Navigation.NavigateTo(spotifyUrl, forceLoad: true);
+            await AuthService.LoginAsync();
         }
         catch (Exception ex)
         {

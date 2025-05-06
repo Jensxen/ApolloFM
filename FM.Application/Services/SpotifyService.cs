@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 
 namespace FM.Application.Services
 {
@@ -28,7 +29,6 @@ namespace FM.Application.Services
 
             _logger.LogInformation($"BaseAddress: {_httpClient.BaseAddress}");
         }
-
 
         public async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(string code, string clientId, string clientSecret, string redirectUri)
         {

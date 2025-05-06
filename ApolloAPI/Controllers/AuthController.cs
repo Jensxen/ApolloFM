@@ -24,6 +24,15 @@ public class AuthController : ControllerBase
     private readonly TokenService _tokenService;
     private readonly string _clientAppUrl;
 
+    private string GenerateAndStoreState()
+    {
+        var state = Guid.NewGuid().ToString();
+
+        HttpContext.Session.SetString("OAuthState", state);
+
+        return state;
+    }
+
     public AuthController(
         ILogger<AuthController> logger,
         SpotifyService spotifyService,
@@ -210,36 +219,44 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string returnUrl = null, string state = null)
+    public IActionResult Login([FromQuery] string returnUrl = null, [FromQuery] string clientState = null)
     {
-        _logger.LogInformation("Login request received with returnUrl: {ReturnUrl} and state length: {StateLength}",
-            returnUrl, state?.Length ?? 0);
-
         var clientId = _configuration["Spotify:ClientId"];
+        var redirectUri = _configuration["Spotify:RedirectUri"];
 
-        // This should point to your API's callback
-        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
+        // Allow the client to provide the state (from localStorage)
+        string state;
+        if (string.IsNullOrEmpty(clientState))
+        {
+            // Generate server-side state as fallback
+            state = Guid.NewGuid().ToString();
+        }
+        else
+        {
+            // Use client-provided state
+            state = clientState;
+            _logger.LogInformation("Using client-provided state: {State}", state);
+        }
 
-        // Use the provided state directly - don't generate a new one
-        // This will maintain the state value the client sent
-        string finalState = state ?? Guid.NewGuid().ToString();
+        // Store in session for server-side validation if needed
+        HttpContext.Session.SetString("OAuthState", state);
 
-        _logger.LogInformation("Using state: {State}", finalState);
+        _logger.LogInformation("Generated OAuth state: {State}", state);
 
-        var scopes = "user-read-private user-read-email user-top-read user-read-currently-playing";
+        var queryParams = new Dictionary<string, string?>
+    {
+        {"response_type", "code"},
+        {"client_id", clientId},
+        {"scope", "user-read-private user-read-email user-top-read user-read-currently-playing"},
+        {"redirect_uri", redirectUri},
+        {"state", state}
+    };
 
-        var authorizationUrl = $"https://accounts.spotify.com/authorize" +
-                              $"?client_id={Uri.EscapeDataString(clientId)}" +
-                              $"&response_type=code" +
-                              $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-                              $"&scope={Uri.EscapeDataString(scopes)}" +
-                              $"&state={Uri.EscapeDataString(finalState)}";
+        var queryString = QueryString.Create(queryParams);
+        var authorizationEndpoint = $"https://accounts.spotify.com/authorize{queryString}";
 
-        _logger.LogInformation("Redirecting to Spotify authorization: {Url}", authorizationUrl);
-        return Redirect(authorizationUrl);
+        return Redirect(authorizationEndpoint);
     }
-
-
 
     [HttpGet("logout")]
     public IActionResult Logout(string returnUrl = null)
@@ -265,6 +282,19 @@ public class AuthController : ControllerBase
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(string code, string state)
     {
+        var storedState = HttpContext.Session.GetString("OAuthState");
+        if (state != storedState)
+        {
+            _logger.LogWarning("State mismatch: expected {ExpectedState}, received {ReceivedState}", storedState, state);
+
+            GenerateAndStoreState(); // Generate a new state for the next request
+            return Redirect($"/api/auth/login");
+        }
+
+        if (string.IsNullOrEmpty(code))
+        {
+            return BadRequest(new { error = "Code is missing from the callback" });
+        }
         _logger.LogInformation("Spotify OAuth callback received with code length: {CodeLength}, state length: {StateLength}",
             code?.Length ?? 0, state?.Length ?? 0);
 
@@ -307,6 +337,7 @@ public class AuthController : ControllerBase
 
 
     [HttpGet("handle-state-error")]
+    [HttpPost("handle-state-error")]
     public async Task<IActionResult> HandleStateError(string code, string state = null)
     {
         _logger.LogInformation("Handling Spotify OAuth callback with code: {CodeStart}..., state: {StateStart}...",
@@ -325,44 +356,33 @@ public class AuthController : ControllerBase
             var clientSecret = _configuration["Spotify:ClientSecret"];
             var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/handle-state-error";
 
-            // Use SpotifyService to exchange the authorization code for an access token
+            // Exchange code for token regardless of state
             var tokenResponse = await _spotifyService.ExchangeCodeForTokenAsync(code, clientId, clientSecret, redirectUri);
 
-            if (tokenResponse == null)
+            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
             {
-                _logger.LogError("Token response is null after exchange attempt");
+                _logger.LogError("Token response is null or invalid after exchange attempt");
                 return Redirect($"{_clientAppUrl}/?error=token_exchange_failed");
             }
 
-            if (string.IsNullOrEmpty(tokenResponse.AccessToken))
-            {
-                _logger.LogError("Access token is empty or null in token response");
-                _logger.LogInformation("Token response properties: TokenType={TokenType}, Scope={Scope}, ExpiresIn={ExpiresIn}, RefreshToken={HasRefreshToken}",
-                    tokenResponse.TokenType,
-                    tokenResponse.Scope,
-                    tokenResponse.ExpiresIn,
-                    !string.IsNullOrEmpty(tokenResponse.RefreshToken));
-                return Redirect($"{_clientAppUrl}/?error=token_exchange_failed");
-            }
-
-            // Store the access token and refresh token
+            // Store tokens server-side
             _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
-
             if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
             {
                 _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
             }
 
-            _logger.LogInformation("Successfully exchanged code for token. Redirecting to {RedirectUrl}",
-                $"{_clientAppUrl}/dashboard");
-
-            // Include original state when redirecting
-            var redirectUrl = $"{_clientAppUrl}/dashboard";
+            // Pass tokens to client for client-side storage
+            var redirectUrl = $"{_clientAppUrl}/spotify-callback?code={Uri.EscapeDataString(code)}";
             if (!string.IsNullOrEmpty(state))
             {
-                redirectUrl += $"?state={Uri.EscapeDataString(state)}";
+                redirectUrl += $"&state={Uri.EscapeDataString(state)}";
             }
 
+            // You could also add the token directly to help the client
+            // redirectUrl += $"&access_token={Uri.EscapeDataString(tokenResponse.AccessToken)}&expires_in={tokenResponse.ExpiresIn}";
+
+            _logger.LogInformation("Successfully exchanged code for token. Redirecting to {RedirectUrl}", redirectUrl);
             return Redirect(redirectUrl);
         }
         catch (Exception ex)
@@ -370,6 +390,21 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Error handling Spotify OAuth callback");
             return Redirect($"{_clientAppUrl}/?error={Uri.EscapeDataString(ex.Message)}");
         }
+    }
+
+    [HttpGet("debug-session")]
+    public IActionResult DebugSession([FromQuery] string clientState = null)
+    {
+        var sessionState = HttpContext.Session.GetString("OAuthState");
+
+        return Ok(new
+        {
+            serverState = sessionState,
+            clientState = clientState,
+            match = sessionState == clientState,
+            timestamp = DateTime.UtcNow,
+            sessionId = HttpContext.Session.Id
+        });
     }
 
     [HttpGet("check-tokens")]
@@ -432,5 +467,23 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Error refreshing access token");
             return StatusCode(500, new { error = "unexpected_error" });
         }
+    }
+
+    [HttpGet("refresh-state")]
+    public IActionResult RefreshState()
+    {
+        // Clear any existing state
+        HttpContext.Session.Remove("OAuthState");
+
+        // Generate new state
+        var newState = GenerateAndStoreState();
+
+        _logger.LogInformation("OAuth state refreshed: {NewState}", newState);
+
+        return Ok(new
+        {
+            message = "OAuth state refreshed successfully",
+            newState = newState
+        });
     }
 }
