@@ -1,7 +1,7 @@
 ﻿@page "/dashboard"
 @using FM.Application.Services
 @using FM.Application.Services.ServiceDTO
-@inject AuthService AuthService
+@inject BrowserAuthService AuthService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -32,8 +32,8 @@
 		<div>
 			<!-- Now Playing Section -->
 			<div style="position: absolute; top: 20px; right: 20px; width: 200px; background-color: #181818;
-                 border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                 display: flex; flex-direction: column; align-items: center; z-index: 1000;">
+     border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+     display: flex; flex-direction: column; align-items: center; z-index: 1000;">
 				@if (nowPlayingTrack != null)
 				{
 					<div style="display: flex; align-items: center; width: 100%;">
@@ -45,7 +45,7 @@
 						<div style="flex-grow: 1; overflow: hidden;">
 							<!-- Song Name with improved animation -->
 							<div class="scrolling-container">
-								@if (nowPlayingTrack.SongName.Length > 20)
+								@if (nowPlayingTrack.SongName?.Length > 20)
 								{
 									<div class="scrolling-text">
 										<span>@nowPlayingTrack.SongName</span>
@@ -61,7 +61,7 @@
 
 							<!-- Artist Name with improved animation -->
 							<div class="scrolling-container">
-								@if (nowPlayingTrack.Artist.Length > 20)
+								@if (nowPlayingTrack.Artist?.Length > 20)
 								{
 									<div class="scrolling-text artist">
 										<span>@nowPlayingTrack.Artist</span>
@@ -277,6 +277,7 @@
 
 				// Start the polling timer
 				StartPollingForNowPlaying();
+				hasError = false;
 			}
 			else
 			{
@@ -297,6 +298,7 @@
 			StateHasChanged();
 		}
 	}
+
 
 
 	private string GetSpotifyUriFromUrl(string url)
@@ -367,9 +369,17 @@
 		{
 			var updatedTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
 
+			// Ensure we have valid data
+			if (updatedTrack != null)
+			{
+				// Provide default values for any null properties
+				updatedTrack.SongName ??= "Unknown Track";
+				updatedTrack.Artist ??= "Unknown Artist";
+			}
+
 			// Check if the track has changed (different ID or play state changed)
 			bool trackChanged = (updatedTrack?.SongUrl != currentSongId) ||
-													(nowPlayingTrack?.isPlaying != updatedTrack?.isPlaying);
+								(nowPlayingTrack?.isPlaying != updatedTrack?.isPlaying);
 
 			if (trackChanged)
 			{
@@ -387,6 +397,7 @@
 			// Don't update the UI on error - keep showing the last known track
 		}
 	}
+
 
 	private async Task CheckAuthAndLoadData()
 	{
@@ -450,6 +461,14 @@
 		{
 			nowPlayingTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
 			currentSongId = nowPlayingTrack?.SongUrl; // Store current song ID
+
+			// Ensure we have valid data
+			if (nowPlayingTrack != null)
+			{
+				// Provide default values for any null properties to avoid errors
+				nowPlayingTrack.SongName ??= "Unknown Track";
+				nowPlayingTrack.Artist ??= "Unknown Artist";
+			}
 		}
 		catch (Exception ex)
 		{

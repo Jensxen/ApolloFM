@@ -4,10 +4,10 @@
 @using Microsoft.JSInterop
 @using System.Text.Json
 @implements IDisposable
-@inject AuthService AuthService
+@inject BrowserAuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-@inject TokenService TokenService
+@inject BrowserTokenService TokenService
 @inject IJSRuntime JSRuntime
 
 <div class="homepage-container">
@@ -69,14 +69,14 @@
 		{
 			Console.WriteLine("Home: OnInitializedAsync started");
 
-			// Hent token fra TokenService
-			var token = TokenService.GetAccessToken();
+			// Get token from TokenService - now with await
+			var token = await TokenService.GetAccessToken();
 
 			if (!string.IsNullOrEmpty(token))
 			{
 				try
 				{
-					// Autentificer bruger med token
+					// Authenticate user with token
 					var authProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
 					await authProvider.MarkUserAsAuthenticated(token);
 					Console.WriteLine("User authenticated with stored token");
@@ -89,7 +89,7 @@
 
 			AuthStateProvider.AuthenticationStateChanged += AuthenticationStateChangedHandler;
 
-			// Tjek om brugeren er logget ind
+			// Check if the user is logged in - now with await
 			isLoggedIn = await AuthService.IsUserAuthenticated();
 		}
 		catch (Exception ex)
@@ -101,6 +101,7 @@
 			isLoading = false;
 		}
 	}
+
 
 	private async Task LoginAsync()
 	{

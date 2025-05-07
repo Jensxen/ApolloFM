@@ -10,10 +10,10 @@ namespace ApolloFM
 {
     public class SpotifyAuthorizationMessageHandler : DelegatingHandler
     {
-        private readonly TokenService _tokenService;
+        private readonly BrowserTokenService _tokenService;
         private readonly NavigationManager _navigationManager;
 
-        public SpotifyAuthorizationMessageHandler(TokenService tokenService, NavigationManager navigationManager)
+        public SpotifyAuthorizationMessageHandler(BrowserTokenService tokenService, NavigationManager navigationManager)
         {
             _tokenService = tokenService;
             _navigationManager = navigationManager;
@@ -21,14 +21,14 @@ namespace ApolloFM
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            // Get the access token
-            var token = _tokenService.GetAccessToken();
+            // Get the access token - now using await for async method
+            var token = await _tokenService.GetAccessToken();
 
-            // Check if token is valid or needs refresh
-            if (string.IsNullOrEmpty(token) || _tokenService.NeedsRefresh())
+            // Check if token is valid or needs refresh - now using await
+            if (string.IsNullOrEmpty(token) || await _tokenService.NeedsRefresh())
             {
-                // Try to use refresh token if available
-                var refreshToken = _tokenService.GetRefreshToken();
+                // Try to use refresh token if available - now using await
+                var refreshToken = await _tokenService.GetRefreshToken();
                 if (!string.IsNullOrEmpty(refreshToken))
                 {
                     try
@@ -47,14 +47,15 @@ namespace ApolloFM
 
                         if (response.IsSuccessStatusCode)
                         {
-                            var tokenResponse = await response.Content.ReadFromJsonAsync<AuthService.TokenResponse>(cancellationToken: cancellationToken);
+                            var tokenResponse = await response.Content.ReadFromJsonAsync<BrowserAuthService.TokenResponse>(cancellationToken: cancellationToken);
                             if (tokenResponse != null && !string.IsNullOrEmpty(tokenResponse.AccessToken))
                             {
-                                _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
+                                // Now awaiting the async methods
+                                await _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
 
                                 if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
                                 {
-                                    _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
+                                    await _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
                                 }
 
                                 token = tokenResponse.AccessToken;
@@ -85,4 +86,3 @@ namespace ApolloFM
         }
     }
 }
-

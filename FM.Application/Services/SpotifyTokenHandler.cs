@@ -2,13 +2,14 @@
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using FM.Application.Interfaces.IServices;
 using FM.Application.Services;
 
 public class SpotifyTokenHandler : DelegatingHandler
 {
-    private readonly TokenService _tokenService;
+    private readonly ITokenService _tokenService;
 
-    public SpotifyTokenHandler(TokenService tokenService)
+    public SpotifyTokenHandler(ITokenService tokenService)
     {
         _tokenService = tokenService;
     }
@@ -16,7 +17,7 @@ public class SpotifyTokenHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var token = _tokenService.GetAccessToken();
+        var token = await _tokenService.GetAccessToken();
         
         if (!string.IsNullOrEmpty(token))
         {

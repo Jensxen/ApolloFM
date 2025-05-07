@@ -30,22 +30,26 @@ namespace FM.Application.Services
             _logger.LogInformation($"BaseAddress: {_httpClient.BaseAddress}");
         }
 
-        public async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(string code, string clientId, string clientSecret, string redirectUri)
+        public async Task<SpotifyTokenResponse> ExchangeCodeForTokenAsync(
+    string code, string clientId, string clientSecret, string redirectUri)
         {
             try
             {
-                _logger.LogInformation("Starting token exchange with code: {CodeStart}..., redirect URI: {RedirectUri}",
-                    code.Substring(0, Math.Min(5, code.Length)), redirectUri);
+                _logger.LogInformation("Exchanging code for token with redirect URI: {RedirectUri}", redirectUri);
+                _logger.LogWarning("REDIRECT URI CHECK: {RedirectUri} - This must match Spotify Dashboard exactly", redirectUri);
+
+                // Log timing for debugging
+                var startTime = DateTime.UtcNow;
+                _logger.LogDebug("Starting token exchange at {StartTime} UTC", startTime.ToString("HH:mm:ss.fff"));
+
+                // Create auth header with Base64 encoded client credentials
+                var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
 
                 using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
 
-                // Set up the Basic Auth header with client_id and client_secret
-                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-
-                _logger.LogInformation("Added authorization header with credentials");
-
-                // Create the form data for the token request
+                // Create form data
                 var formData = new Dictionary<string, string>
         {
             { "grant_type", "authorization_code" },
@@ -53,87 +57,39 @@ namespace FM.Application.Services
             { "redirect_uri", redirectUri }
         };
 
-                _logger.LogInformation("Form data: grant_type={GrantType}, code={CodeStart}..., redirect_uri={RedirectUri}",
-                    "authorization_code", code.Substring(0, Math.Min(5, code.Length)), redirectUri);
-
                 var content = new FormUrlEncodedContent(formData);
 
-                _logger.LogInformation("Sending POST request to Spotify token endpoint");
-
-                // Send the request to Spotify's token endpoint
+                // Make request to Spotify token endpoint
                 var response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", content);
+
+                // Read response content
                 var responseContent = await response.Content.ReadAsStringAsync();
 
-                _logger.LogInformation("Received response from Spotify: Status {StatusCode}", response.StatusCode);
-
-                // Log the actual response content in a safe way
-                if (responseContent.Length > 100)
-                {
-                    _logger.LogDebug("Response content: {Content}...", responseContent.Substring(0, 100));
-                }
-                else
-                {
-                    _logger.LogDebug("Response content: {Content}", responseContent);
-                }
+                // Log time taken
+                var endTime = DateTime.UtcNow;
+                _logger.LogDebug("Token exchange completed at {EndTime} UTC, took {ElapsedMs}ms",
+                    endTime.ToString("HH:mm:ss.fff"),
+                    (endTime - startTime).TotalMilliseconds);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Spotify token exchange failed: {StatusCode}, {Content}",
+                    _logger.LogError("Spotify token request failed: {StatusCode}, {Response}",
                         response.StatusCode, responseContent);
-                    return null;
+
+                    throw new HttpRequestException($"Spotify token request failed: {response.StatusCode}, {responseContent}");
                 }
 
-                _logger.LogInformation("Successfully received token response");
+                _logger.LogInformation("Successful token exchange with Spotify");
 
-                // Parse the JSON response into a SpotifyTokenResponse object
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    AllowTrailingCommas = true
-                };
-
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var tokenResponse = JsonSerializer.Deserialize<SpotifyTokenResponse>(responseContent, options);
-
-                if (tokenResponse == null)
-                {
-                    _logger.LogError("Failed to deserialize token response: null result");
-                    return null;
-                }
-
-                _logger.LogInformation("Token response: AccessToken={HasAccessToken}, RefreshToken={HasRefreshToken}, ExpiresIn={ExpiresIn}",
-                    !string.IsNullOrEmpty(tokenResponse.AccessToken),
-                    !string.IsNullOrEmpty(tokenResponse.RefreshToken),
-                    tokenResponse.ExpiresIn);
-
-                // Verify the access token is actually present
-                if (string.IsNullOrEmpty(tokenResponse.AccessToken))
-                {
-                    _logger.LogError("Access token is missing in the response despite successful HTTP status");
-
-                    // Try to log property names from response to debug serialization issues
-                    try
-                    {
-                        var jsonDoc = JsonDocument.Parse(responseContent);
-                        var properties = string.Join(", ", jsonDoc.RootElement.EnumerateObject().Select(p => p.Name));
-                        _logger.LogInformation("Response JSON properties: {Properties}", properties);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to parse response JSON");
-                    }
-
-                    return null;
-                }
-
-                _logger.LogInformation("Successfully received valid token response with access token length: {TokenLength}",
-                    tokenResponse.AccessToken.Length);
 
                 return tokenResponse;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error exchanging code for token: {ErrorMessage}", ex.Message);
-                return null;
+                _logger.LogError(ex, "Error exchanging authorization code for tokens");
+                throw;
             }
         }
 

@@ -9,6 +9,7 @@ using FM.Application.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication;
+using FM.Application.Interfaces.IServices;
 
 namespace FM.Application
 {
@@ -30,9 +31,29 @@ namespace FM.Application
             services.AddScoped<IPostQuery, PostQuery>();
             services.AddScoped<IUserQuery, UserQuery>();
 
-           
+
             // Services
             services.AddScoped<SpotifyService>();
+
+
+            if (isApiContext)
+            {
+                // Only register ITokenService if it hasn't been registered already
+                if (!services.Any(s => s.ServiceType == typeof(ITokenService)))
+                {
+                    services.AddScoped<ITokenService, ServerTokenService>();
+                }
+                services.AddScoped<IAuthService, ServerAuthService>();
+            }
+            else
+            {
+                // For Blazor, use browser storage implementation
+                services.AddScoped<ITokenService, BrowserTokenService>();
+
+                services.AddScoped<IAuthService, BrowserAuthService>();
+            }
+
+            
 
             if (!isApiContext)
             {

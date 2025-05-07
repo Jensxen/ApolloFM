@@ -19,4 +19,5 @@ namespace FM.Application.Services.ServiceDTO
         [JsonPropertyName("refresh_token")]
         public string RefreshToken { get; set; }
     }
+
 }

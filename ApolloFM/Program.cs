@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
 using FM.Application;
 using FM.Application.Services;
+using FM.Application.Interfaces.IServices;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ApolloFM.JsInterop;
@@ -31,6 +32,13 @@ builder.Services.AddHttpClient("ApolloAPI", client =>
 // Add default HttpClient (pointing to the host)
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
+// Register BrowserTokenService
+builder.Services.AddScoped<BrowserTokenService>();
+
+// Register ITokenService implemented by BrowserTokenService
+builder.Services.AddScoped<ITokenService>(sp => 
+    sp.GetRequiredService<BrowserTokenService>());
+
 // Register custom AuthenticationStateProvider
 builder.Services.AddScoped<SpotifyAuthenticationStateProvider>(sp =>
 {
@@ -42,19 +50,18 @@ builder.Services.AddScoped<SpotifyAuthenticationStateProvider>(sp =>
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<SpotifyAuthenticationStateProvider>());
 
-builder.Services.AddScoped<TokenService>();
+// Wrong parameter - should be false for client app
+builder.Services.AddApplicationServices(isApiContext: false);
 
-builder.Services.AddApplicationServices(isApiContext: false, registerAuthenticationProvider: false);
-
-builder.Services.AddScoped<AuthService>(provider =>
+builder.Services.AddScoped<BrowserAuthService>(provider =>
 {
     var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
     var navigationManager = provider.GetRequiredService<NavigationManager>();
-    var tokenService = provider.GetRequiredService<TokenService>();
+    var tokenService = provider.GetRequiredService<BrowserTokenService>();
     var jsRuntime = provider.GetRequiredService<IJSRuntime>();
 
-    return new AuthService(
+    return new BrowserAuthService(
         httpClientFactory, 
         authStateProvider, 
         navigationManager, 
@@ -62,19 +69,22 @@ builder.Services.AddScoped<AuthService>(provider =>
         jsRuntime);
 });
 
+// Register IAuthService with BrowserAuthService implementation
+builder.Services.AddScoped<IAuthService>(sp => 
+    sp.GetRequiredService<BrowserAuthService>());
+
 // Add this line to set up the JS interop
 builder.Services.AddScoped(sp => new AuthInteropService(
     sp.GetRequiredService<AuthenticationStateProvider>(),
     sp.GetRequiredService<NavigationManager>()
 ));
 
-
+// Register token handler
 builder.Services.AddTransient<SpotifyTokenHandler>();
 builder.Services.AddHttpClient("SpotifyAPIAuth", client =>
 {
     client.BaseAddress = new Uri("https://api.spotify.com/v1/");
 }).AddHttpMessageHandler<SpotifyTokenHandler>();
-
 
 // Build and run the host
 var host = builder.Build();

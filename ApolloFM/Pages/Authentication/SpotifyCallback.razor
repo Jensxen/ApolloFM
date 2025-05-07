@@ -1,115 +1,143 @@
 ﻿@page "/spotify-callback"
-@using FM.Application.Services
-@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
+@inject BrowserAuthService AuthService
+@inject BrowserTokenService TokenService
+@inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
-@inject NavigationManager Navigation
-@inject AuthService AuthService
-@inject TokenService TokenService
-@inject SpotifyAuthenticationStateProvider AuthStateProvider
 
-<div class="container mt-5">
-    <div class="text-center">
-        <h2>Processing Authentication...</h2>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">
-                <p>@errorMessage</p>
-                <button class="btn btn-primary mt-3" @onclick="ReturnHome">Return to Home</button>
-            </div>
-        }
-        else
-        {
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-3">Please wait while we complete your authentication...</p>
-        }
+<div class="container text-center my-5">
+    <h1>Logging you in...</h1>
+    <div class="spinner-border text-primary mt-3" role="status">
+        <span class="visually-hidden">Loading...</span>
     </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(hasError ? "alert-danger" : "alert-info") mt-3">
+            @statusMessage
+        </div>
+    }
 </div>
 
 @code {
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public string State { get; set; }
-
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public string Code { get; set; }
-
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public string Error { get; set; }
-
-    private string errorMessage = "";
+    private string statusMessage;
+    private bool hasError = false;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            Console.WriteLine("SpotifyCallback: OnInitializedAsync started");
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            UpdateStatus("Processing callback URL...");
 
-            // Check for error parameter first
-            if (!string.IsNullOrEmpty(Error))
+            await JSRuntime.InvokeVoidAsync("console.log", "Callback URI: " + uri.ToString());
+
+            // Store the full URL for debugging
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "last_callback_url", uri.ToString());
+
+            // Check for errors in the URL
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("error", out var error))
             {
-                errorMessage = $"Authentication error: {Error}";
+                UpdateStatus($"Auth error: {error}", true);
+                await JSRuntime.InvokeVoidAsync("console.error", $"Auth error: {error}");
+                await Task.Delay(2000); // Show error briefly
+                NavigationManager.NavigateTo("/?error=" + Uri.EscapeDataString(error));
                 return;
             }
 
-            // Check if we have a code parameter (required)
-            if (string.IsNullOrEmpty(Code))
+            // Try to get the authorization code from the URL
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("code", out var codeValues))
             {
-                errorMessage = "Authorization code is missing. Please try logging in again.";
-                return;
+                // Extract the first value from StringValues
+                var code = codeValues.ToString();
+
+                // Check for existing code in session to prevent reuse
+                var existingCode = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "last_processed_auth_code");
+                if (!string.IsNullOrEmpty(existingCode) && existingCode == code)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.warn", "This authorization code has already been processed");
+
+                    // Check if we already have tokens
+                    var accessToken = await TokenService.GetAccessToken();
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        UpdateStatus("You're already logged in, redirecting to dashboard...");
+                        await Task.Delay(1000);
+                        NavigationManager.NavigateTo("/dashboard");
+                        return;
+                    }
+
+                    // If no tokens, go back to login
+                    UpdateStatus("Authentication session expired, please log in again", true);
+                    await Task.Delay(2000);
+                    NavigationManager.NavigateTo("/");
+                    return;
+                }
+
+                // Mark this code as being processed
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "last_processed_auth_code", code);
+
+                UpdateStatus("Authorization code received, exchanging for tokens...");
+                await JSRuntime.InvokeVoidAsync("console.log", $"Found new authorization code, length: {code?.Length ?? 0}");
+
+                try
+                {
+                    // Add timestamp for debugging
+                    await JSRuntime.InvokeVoidAsync("console.log",
+                        $"Starting token exchange at {DateTime.Now.ToString("HH:mm:ss.fff")}");
+
+                    // Process the code-for-token exchange
+                    await AuthService.HandleCallback(code);
+
+                    // Verify tokens were properly stored
+                    var accessToken = await TokenService.GetAccessToken();
+                    var refreshToken = await TokenService.GetRefreshToken();
+
+                    bool tokensValid = !string.IsNullOrEmpty(accessToken);
+                    bool hasRefreshToken = !string.IsNullOrEmpty(refreshToken);
+
+                    UpdateStatus($"Authentication {(tokensValid ? "successful" : "failed")}. " +
+                      $"Refresh token {(hasRefreshToken ? "received" : "missing")}.");
+
+                    await JSRuntime.InvokeVoidAsync("console.log",
+                        $"Token verification: Access token exists: {tokensValid}, " +
+                        $"Refresh token exists: {hasRefreshToken}");
+
+                    // Navigate to dashboard on success
+                    await Task.Delay(500); // Brief delay to show success
+                    NavigationManager.NavigateTo("/dashboard");
+                }
+                catch (Exception ex)
+                {
+                    UpdateStatus($"Authentication failed: {ex.Message}", true);
+                    await JSRuntime.InvokeVoidAsync("console.error", $"Error handling Spotify callback: {ex.Message}");
+                    await Task.Delay(3000); // Show error message for a bit longer
+                    NavigationManager.NavigateTo("/?error=" + Uri.EscapeDataString($"callback_error:{ex.Message}"));
+                }
             }
-
-            Console.WriteLine($"Callback received with code: {Code.Substring(0, Math.Min(10, Code.Length))}...");
-            Console.WriteLine($"Callback received with state: {State}");
-
-            // Validate state parameter if provided
-            var storedState = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "spotify_auth_state");
-
-            if (!string.IsNullOrEmpty(State) && !string.IsNullOrEmpty(storedState) && State != storedState)
+            else
             {
-                Console.WriteLine($"State mismatch - stored: {storedState} url: {State}");
-                // Log warning but continue
-            }
-
-            // Process the authorization code directly here
-            try
-            {
-                // Use the code directly with the auth service
-                await ProcessAuthCode(Code);
-            }
-            catch (Exception ex)
-            {
-                errorMessage = "Failed to process authentication. Please try again.";
-                Console.Error.WriteLine($"Error processing auth code: {ex.Message}");
+                UpdateStatus("No authorization code found in URL", true);
+                await JSRuntime.InvokeVoidAsync("console.error", "No code found in callback URL");
+                await Task.Delay(2000);
+                NavigationManager.NavigateTo("/?error=missing_code");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error in callback: {ex.Message}");
-            errorMessage = "Authentication error occurred";
-            // Don't try to serialize the exception for logging
+            UpdateStatus($"Unexpected error: {ex.Message}", true);
+            await JSRuntime.InvokeVoidAsync("console.error", $"Unhandled error in callback: {ex.Message}");
+            await Task.Delay(3000);
+            NavigationManager.NavigateTo("/?error=" + Uri.EscapeDataString($"unhandled:{ex.Message}"));
         }
     }
 
-    private async Task ProcessAuthCode(string code)
+    private void UpdateStatus(string message, bool isError = false)
     {
-        // Method 1: Store the access token directly without making API call
-        TokenService.SetAccessToken("temporary_token", 3600);
-
-        // Update auth state
-        var authProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
-        await authProvider.MarkUserAsAuthenticated("temporary_token");
-
-        // Navigate to dashboard - this will trigger a token refresh through the normal flow
-        Navigation.NavigateTo("/dashboard");
-    }
-
-    private void ReturnHome()
-    {
-        Navigation.NavigateTo("/");
+        statusMessage = message;
+        hasError = isError;
+        StateHasChanged();
     }
 }
+

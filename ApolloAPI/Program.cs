@@ -9,6 +9,7 @@ using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using FM.Application.Services;
 using Microsoft.AspNetCore.Authentication;
+using FM.Application.Interfaces.IServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,10 +19,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpClient<SpotifyService>();
-builder.Services.AddSingleton<TokenService>();
-
-
+builder.Services.AddSingleton<ITokenService, ServerTokenService>();
+builder.Services.AddScoped<IAuthService, ServerAuthService>();
 builder.Services.AddDistributedMemoryCache(); // Kræves til sessionstorage
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(60); // Hvor længe en sessions varer
