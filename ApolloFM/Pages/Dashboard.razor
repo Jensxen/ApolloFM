@@ -4,214 +4,483 @@
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
-<div class="dashboard-container">
-    <h1>Your Spotify Dashboard</h1>
+<div style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+	<h1>Your Spotify Dashboard</h1>
 
-    @if (isLoading)
-    {
-        <div class="spinner-container">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    }
-    else if (hasError)
-    {
-        <div class="alert alert-danger">
-            <p>@errorMessage</p>
-            <div class="mt-3">
-                <button class="btn btn-primary me-2" @onclick="RetryLoading">Retry</button>
-                <button class="btn btn-success" @onclick="Login">Login to Spotify</button>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div>
-            <!-- Top tracks section -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">Your Top Tracks</h3>
-                        <div class="btn-group">
-                            <button class="btn @(selectedTimeRange == "short_term" ? "btn-primary" : "btn-outline-primary")"
-                                    @onclick="@(() => ChangeTimeRange("short_term"))">
-                                Last 4 Weeks
-                            </button>
-                            <button class="btn @(selectedTimeRange == "medium_term" ? "btn-primary" : "btn-outline-primary")"
-                                    @onclick="@(() => ChangeTimeRange("medium_term"))">
-                                Last 6 Months
-                            </button>
-                            <button class="btn @(selectedTimeRange == "long_term" ? "btn-primary" : "btn-outline-primary")"
-                                    @onclick="@(() => ChangeTimeRange("long_term"))">
-                                All Time
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if (loadingTopTracks)
-                    {
-                        <div class="text-center p-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    }
-                    else if (topTracks != null && topTracks.Any())
-                    {
-                        <div class="list-group list-group-flush">
-                            @for (int i = 0; i < topTracks.Count; i++)
-                            {
-                                var track = topTracks[i];
-                                var index = i;
+	@if (isLoading)
+	{
+		<div style="display: flex; justify-content: center; padding: 50px 0;">
+			<div class="spinner-border text-primary" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	}
+	else if (hasError)
+	{
+		<div class="alert alert-danger">
+			<p>@errorMessage</p>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" @onclick="RetryLoading">Retry</button>
+				<button class="btn btn-success" @onclick="Login">Login to Spotify</button>
+			</div>
+		</div>
+	}
+	else
+	{
+		<div>
+			<!-- Now Playing Section -->
+			<div style="position: absolute; top: 20px; right: 20px; width: 200px; background-color: #181818;
+                 border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                 display: flex; flex-direction: column; align-items: center; z-index: 1000;">
+				@if (nowPlayingTrack != null)
+				{
+					<div style="display: flex; align-items: center; width: 100%;">
+						@if (!string.IsNullOrEmpty(nowPlayingTrack.AlbumImageUrl))
+						{
+							<img src="@nowPlayingTrack.AlbumImageUrl" alt="Album Cover"
+								 style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
+						}
+						<div style="flex-grow: 1; overflow: hidden;">
+							<!-- Song Name with improved animation -->
+							<div class="scrolling-container">
+								@if (nowPlayingTrack.SongName.Length > 20)
+								{
+									<div class="scrolling-text">
+										<span>@nowPlayingTrack.SongName</span>
+										<span class="spacer">•</span>
+										<span>@nowPlayingTrack.SongName</span>
+									</div>
+								}
+								else
+								{
+									<div>@nowPlayingTrack.SongName</div>
+								}
+							</div>
 
-                                <div class="list-group-item d-flex align-items-center">
-                                    <div class="me-3 text-center" style="width: 30px;">
-                                        <span class="text-muted">@(index + 1)</span>
-                                    </div>
-                                    @if (!string.IsNullOrEmpty(track.AlbumImageUrl))
-                                    {
-                                        <img src="@track.AlbumImageUrl" alt="Album Cover" class="top-track-image me-3" />
-                                    }
-                                    <div>
-                                        <h5 class="mb-1">@track.SongName</h5>
-                                        <p class="mb-1">@track.Artist</p>
-                                        <small class="text-muted">@track.Album</small>
-                                    </div>
-                                    <div class="ms-auto">
-                                        @if (!string.IsNullOrEmpty(track.SongUrl))
-                                        {
-                                            <a href="@track.SongUrl" target="_blank" class="btn btn-sm btn-outline-success">
-                                                <i class="fab fa-spotify me-1"></i> Play
-                                            </a>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center p-4">
-                            <p class="text-muted">No top tracks found for this time period.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
+							<!-- Artist Name with improved animation -->
+							<div class="scrolling-container">
+								@if (nowPlayingTrack.Artist.Length > 20)
+								{
+									<div class="scrolling-text artist">
+										<span>@nowPlayingTrack.Artist</span>
+										<span class="spacer">•</span>
+										<span>@nowPlayingTrack.Artist</span>
+									</div>
+								}
+								else
+								{
+									<div class="artist">@nowPlayingTrack.Artist</div>
+								}
+							</div>
+
+							<div style="height: 3px; background-color: #535353; border-radius: 2px; margin-top: 4px; overflow: hidden;">
+								<div style="height: 100%; background-color: #1db954; width: @(PlaybackProgress.ToString("F2"))%;"></div>
+							</div>
+						</div>
+					</div>
+				}
+				else
+				{
+					<p style="color: #b3b3b3; font-size: 12px; margin: 0;">No song is currently playing.</p>
+				}
+			</div>
+
+			<!-- Top Tracks Section -->
+			<div style="background-color: #121212; border: none; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" class="mb-4">
+				<div style="background-color: #1e1e1e; border-bottom: 1px solid #333; padding: 15px; border-radius: 8px 8px 0 0;">
+					<div class="d-flex justify-content-between align-items-center">
+						<h3 style="margin: 0; font-size: 20px; color: #fff;">Your Top Tracks</h3>
+						<div class="btn-group">
+							<button class="btn @(selectedTimeRange == "short_term" ? "btn-primary" : "btn-outline-primary")"
+									@onclick="@(() => ChangeTimeRange("short_term"))">
+								Last 4 Weeks
+							</button>
+							<button class="btn @(selectedTimeRange == "medium_term" ? "btn-primary" : "btn-outline-primary")"
+									@onclick="@(() => ChangeTimeRange("medium_term"))">
+								Last 6 Months
+							</button>
+							<button class="btn @(selectedTimeRange == "long_term" ? "btn-primary" : "btn-outline-primary")"
+									@onclick="@(() => ChangeTimeRange("long_term"))">
+								All Time
+							</button>
+						</div>
+					</div>
+				</div>
+				<div class="p-0">
+					@if (loadingTopTracks)
+					{
+						<div class="text-center p-4">
+							<div class="spinner-border text-primary" role="status">
+								<span class="visually-hidden">Loading...</span>
+							</div>
+						</div>
+					}
+					else if (topTracks != null && topTracks.Any())
+					{
+						<div class="list-group list-group-flush">
+							@for (int i = 0; i < topTracks.Count; i++)
+							{
+								var track = topTracks[i];
+								var index = i;
+
+								<div style="display: flex; align-items: center; background-color: #121212;
+                                      border: none; padding: 15px; transition: background-color 0.2s ease;"
+									 class="list-group-item d-flex align-items-center">
+									<div class="me-3 text-center" style="width: 30px;">
+										<span style="color: #b3b3b3;">@(index + 1)</span>
+									</div>
+									@if (!string.IsNullOrEmpty(track.AlbumImageUrl))
+									{
+										<img src="@track.AlbumImageUrl" alt="Album Cover"
+											 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"
+											 class="me-3" />
+									}
+									<div>
+										<h5 style="margin: 0; font-size: 16px; color: #fff;" class="mb-1">@track.SongName</h5>
+										<p style="margin: 0; font-size: 14px; color: #b3b3b3;" class="mb-1">@track.Artist</p>
+										<small style="color: #b3b3b3; font-size: 12px;" class="text-muted">@track.Album</small>
+									</div>
+									<div class="ms-auto">
+										@if (!string.IsNullOrEmpty(track.SongUrl))
+										{
+											<a href="@GetSpotifyUriFromUrl(track.SongUrl)"
+											   style="font-size: 12px; padding: 5px 10px;"
+											   class="btn btn-sm btn-outline-success">
+												<i class="fab fa-spotify me-1"></i> Play
+											</a>
+										}
+									</div>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center p-4">
+							<p class="text-muted">No top tracks found for this time period.</p>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	}
 </div>
 
 <style>
-    .dashboard-container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-    }
+	body {
+		background-color: #121212;
+		margin: 0;
+		padding: 0;
+		color: white;
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	}
 
-    .top-track-image {
-        width: 50px;
-        height: 50px;
-        object-fit: cover;
-        border-radius: 4px;
-    }
+	/* Scrolling text container */
+	.scrolling-container {
+		width: 100%;
+		overflow: hidden;
+		white-space: nowrap;
+		position: relative;
+	}
 
-    .spinner-container {
-        display: flex;
-        justify-content: center;
-        padding: 3rem 0;
-    }
+	/* Scrolling text animation */
+	.scrolling-text {
+		display: inline-block;
+		animation: scroll-text 10s linear infinite;
+	}
+
+	/* Artist text styling */
+	.artist {
+		font-size: 10px;
+		color: #b3b3b3;
+	}
+
+	/* Spacer between repeated text */
+	.spacer {
+		display: inline-block;
+		margin: 0 8px;
+		opacity: 0.6;
+	}
+
+	/* Scrolling animation */
+	@@keyframes scroll-text {
+		0% {
+			transform: translateX(0);
+		}
+
+		100% {
+			transform: translateX(-50%);
+		}
+	}
+
+	/* Override Bootstrap button styles for Spotify theme */
+	.btn-primary {
+		background-color: #1db954;
+		border-color: #1db954;
+	}
+
+	.btn-outline-primary {
+		border-color: #1db954;
+		color: #1db954;
+	}
+
+		.btn-outline-primary:hover {
+			background-color: #1db954;
+			color: #fff;
+		}
+
+	/* Make list items hover effect work */
+	.list-group-item:hover {
+		background-color: #1e1e1e !important;
+	}
 </style>
 
 @code {
-    private bool isLoading = true;
-    private bool hasError = false;
-    private string errorMessage = "";
-    private List<SpotifyDataDTO> topTracks;
+	private bool isLoading = true;
+	private bool hasError = false;
+	private string errorMessage = "";
+	private List<SpotifyDataDTO> topTracks;
 
-    // For top tracks filtering
-    private string selectedTimeRange = "medium_term";
-    private bool loadingTopTracks = false;
+	// For top tracks filtering
+	private string selectedTimeRange = "medium_term";
+	private bool loadingTopTracks = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CheckAuthAndLoadData();
-    }
+	// Now Playing Track
+	private SpotifyDataDTO? nowPlayingTrack;
+	private string? currentSongId; // Track the current song ID to detect changes
 
-    private async Task CheckAuthAndLoadData()
-    {
-        isLoading = true;
-        hasError = false;
+	// Timer for polling
+	private System.Threading.Timer? _pollingTimer;
+	private readonly int _pollingIntervalMs = 3000; // Poll every 3 seconds
 
-        try
-        {
-            // Check authentication first
-            bool isAuthenticated = await AuthService.IsUserAuthenticated();
-            await JSRuntime.InvokeVoidAsync("console.log", $"User is authenticated: {isAuthenticated}");
+	// Playback progress
+	private double PlaybackProgress => nowPlayingTrack != null && nowPlayingTrack.Duration.TotalSeconds > 0
+		? (nowPlayingTrack.Progress.TotalSeconds / nowPlayingTrack.Duration.TotalSeconds) * 100
+		: 0;
 
-            if (!isAuthenticated)
-            {
-                hasError = true;
-                errorMessage = "You need to login to Spotify to access this dashboard.";
-                isLoading = false;
-                return;
-            }
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			isLoading = true;
 
-            // Load just the top tracks data
-            await LoadTopTracks(selectedTimeRange);
-        }
-        catch (Exception ex)
-        {
-            hasError = true;
-            errorMessage = $"Authentication check failed: {ex.Message}";
-            await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
+			// Get token from storage (automatically uses stored tokens)
+			var accessToken = await AuthService.GetValidAccessTokenAsync();
 
-    private async Task LoadTopTracks(string timeRange)
-    {
-        loadingTopTracks = true;
-        StateHasChanged();
+			if (!string.IsNullOrEmpty(accessToken))
+			{
+				// We have a valid token, load dashboard data
+				await LoadTopTracks(selectedTimeRange);
+				await LoadNowPlaying();
 
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("console.log", $"Loading top tracks for time range: {timeRange}");
-            topTracks = await AuthService.GetTopTracksAsync(timeRange);
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("console.error", $"Error loading top tracks: {ex.Message}");
-            topTracks = new List<SpotifyDataDTO>();
-        }
-        finally
-        {
-            loadingTopTracks = false;
-            StateHasChanged();
-        }
-    }
+				// Start the polling timer
+				StartPollingForNowPlaying();
+			}
+			else
+			{
+				// No valid token and couldn't refresh, show error
+				hasError = true;
+				errorMessage = "Your session has expired. Please login again.";
+			}
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error initializing dashboard: {ex.Message}");
+			hasError = true;
+			errorMessage = "There was a problem loading the dashboard. Please try again.";
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
 
-    private async Task ChangeTimeRange(string timeRange)
-    {
-        if (selectedTimeRange == timeRange) return;
 
-        selectedTimeRange = timeRange;
-        await LoadTopTracks(timeRange);
-    }
+	private string GetSpotifyUriFromUrl(string url)
+	{
+		if (string.IsNullOrEmpty(url))
+			return "#";
 
-    private async Task RetryLoading()
-    {
-        await LoadTopTracks(selectedTimeRange);
-    }
+		// Example conversion:
+		// From: https://open.spotify.com/track/1234567890
+		// To:   spotify:track:1234567890
 
-    private async Task Login()
-    {
-        await AuthService.LoginAsync();
-    }
+		try
+		{
+			// Parse the URL to extract track ID
+			if (url.Contains("open.spotify.com"))
+			{
+				// Remove any query parameters
+				int queryIndex = url.IndexOf('?');
+				if (queryIndex > 0)
+				{
+					url = url.Substring(0, queryIndex);
+				}
+
+				// Split by slashes and get the last part (ID)
+				string[] parts = url.Split('/');
+				string id = parts[parts.Length - 1];
+
+				// Determine the type (track, album, artist, etc.)
+				string type = "track"; // Default
+				if (url.Contains("/album/"))
+					type = "album";
+				else if (url.Contains("/artist/"))
+					type = "artist";
+				else if (url.Contains("/playlist/"))
+					type = "playlist";
+
+				// Return the Spotify URI
+				return $"spotify:{type}:{id}";
+			}
+
+			// If it doesn't match the expected format, return the original URL
+			return url;
+		}
+		catch
+		{
+			// If anything goes wrong, return the original URL
+			return url;
+		}
+	}
+
+	private void StartPollingForNowPlaying()
+	{
+		// Stop existing timer if any
+		_pollingTimer?.Dispose();
+
+		// Create a new timer that calls UpdateNowPlaying every _pollingIntervalMs
+		_pollingTimer = new System.Threading.Timer(
+			async _ => await UpdateNowPlaying(),
+			null,
+			_pollingIntervalMs, // Initial delay
+			_pollingIntervalMs  // Interval
+		);
+	}
+
+	private async Task UpdateNowPlaying()
+	{
+		try
+		{
+			var updatedTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
+
+			// Check if the track has changed (different ID or play state changed)
+			bool trackChanged = (updatedTrack?.SongUrl != currentSongId) ||
+													(nowPlayingTrack?.isPlaying != updatedTrack?.isPlaying);
+
+			if (trackChanged)
+			{
+				// Update our reference to the current track
+				nowPlayingTrack = updatedTrack;
+				currentSongId = updatedTrack?.SongUrl;
+
+				// Force UI update on the UI thread
+				await InvokeAsync(StateHasChanged);
+			}
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating now playing track: {ex.Message}");
+			// Don't update the UI on error - keep showing the last known track
+		}
+	}
+
+	private async Task CheckAuthAndLoadData()
+	{
+		isLoading = true;
+		hasError = false;
+
+		try
+		{
+			// Check authentication first
+			bool isAuthenticated = await AuthService.IsUserAuthenticated();
+
+			if (!isAuthenticated)
+			{
+				hasError = true;
+				errorMessage = "You need to login to Spotify to access this dashboard.";
+				return;
+			}
+
+			// Load just the top tracks data
+			await LoadTopTracks(selectedTimeRange);
+		}
+		catch (Exception ex)
+		{
+			hasError = true;
+			errorMessage = $"Authentication check failed: {ex.Message}";
+			await JSRuntime.InvokeVoidAsync("console.error", "Auth check error:", ex.Message);
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
+
+
+	private async Task LoadTopTracks(string timeRange)
+	{
+		loadingTopTracks = true;
+		StateHasChanged();
+
+		try
+		{
+			await JSRuntime.InvokeVoidAsync("console.log", $"Loading top tracks for time range: {timeRange}");
+			topTracks = await AuthService.GetTopTracksAsync(timeRange);
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error loading top tracks: {ex.Message}");
+			topTracks = new List<SpotifyDataDTO>();
+		}
+		finally
+		{
+			loadingTopTracks = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task LoadNowPlaying()
+	{
+		try
+		{
+			nowPlayingTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
+			currentSongId = nowPlayingTrack?.SongUrl; // Store current song ID
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error loading now playing track: {ex.Message}");
+			nowPlayingTrack = null;
+		}
+	}
+
+	private async Task ChangeTimeRange(string timeRange)
+	{
+		if (selectedTimeRange == timeRange) return;
+
+		selectedTimeRange = timeRange;
+		await LoadTopTracks(timeRange);
+	}
+
+	private async Task RetryLoading()
+	{
+		await LoadTopTracks(selectedTimeRange);
+	}
+
+	private async Task Login()
+	{
+		await AuthService.LoginAsync();
+	}
+
+	public void Dispose()
+	{
+		// Clean up the timer when component is disposed
+		_pollingTimer?.Dispose();
+		_pollingTimer = null;
+	}
 }
+

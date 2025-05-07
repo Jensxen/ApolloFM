@@ -33,7 +33,6 @@ namespace FM.Application
            
             // Services
             services.AddScoped<SpotifyService>();
-         
 
             if (!isApiContext)
             {
