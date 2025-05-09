@@ -6,9 +6,15 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<div style="padding: 20px; max-width: 1200px; margin: 0 auto;">
-	<h1>Your Spotify Dashboard</h1>
 
+<div style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+	<img src="@userProfilePictureUrl" alt="User Profile Picture" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);" />
+</div>
+<div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
+	<img src="images/ApolloFM.png" alt="ApolloFM Logo" style="max-width: 150px; height: auto;" />
+</div>
+
+<div style="padding: 20px; max-width: 1200px; margin: 0 auto; margin-top: 80px;">
 	@if (isLoading)
 	{
 		<div style="display: flex; justify-content: center; padding: 50px 0;">
@@ -31,61 +37,60 @@
 	{
 		<div>
 			<!-- Now Playing Section -->
-			<div style="position: absolute; top: 20px; right: 20px; width: 200px; background-color: #181818;
-                 border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                 display: flex; flex-direction: column; align-items: center; z-index: 1000;">
-				@if (nowPlayingTrack != null)
-				{
-					<div style="display: flex; align-items: center; width: 100%;">
-						@if (!string.IsNullOrEmpty(nowPlayingTrack.AlbumImageUrl))
-						{
-							<img src="@nowPlayingTrack.AlbumImageUrl" alt="Album Cover"
-								 style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
-						}
-						<div style="flex-grow: 1; overflow: hidden;">
-							<!-- Song Name with improved animation -->
-							<div class="scrolling-container">
-								@if (nowPlayingTrack.SongName.Length > 20)
-								{
-									<div class="scrolling-text">
-										<span>@nowPlayingTrack.SongName</span>
-										<span class="spacer">•</span>
-										<span>@nowPlayingTrack.SongName</span>
-									</div>
-								}
-								else
-								{
-									<div>@nowPlayingTrack.SongName</div>
-								}
-							</div>
+			@if (nowPlayingTrack != null)
+			{
+				<div style="display: flex; align-items: center; width: 100%; background-color: #1e1e1e; border-radius: 8px; padding: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); position: relative;">
+					<!-- "Now Playing" Label -->
+					<span style="position: absolute; top: -15px; left: 10px; background-color: #1db954; color: white; font-size: 12px; padding: 2px 6px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">
+						Now Playing
+					</span>
 
-							<!-- Artist Name with improved animation -->
-							<div class="scrolling-container">
-								@if (nowPlayingTrack.Artist.Length > 20)
-								{
-									<div class="scrolling-text artist">
-										<span>@nowPlayingTrack.Artist</span>
-										<span class="spacer">•</span>
-										<span>@nowPlayingTrack.Artist</span>
-									</div>
-								}
-								else
-								{
-									<div class="artist">@nowPlayingTrack.Artist</div>
-								}
-							</div>
+					@if (!string.IsNullOrEmpty(nowPlayingTrack.AlbumImageUrl))
+					{
+						<img src="@nowPlayingTrack.AlbumImageUrl" alt="Album Cover"
+							 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; margin-right: 12px;" />
+					}
+					<div style="flex-grow: 1; overflow: hidden;">
+						<div class="scrolling-container">
+							@if (!string.IsNullOrEmpty(nowPlayingTrack.SongName) && nowPlayingTrack.SongName.Length > 20)
+							{
+								<div class="scrolling-text">
+									<span>@nowPlayingTrack.SongName</span>
+									<span class="spacer">•</span>
+									<span>@nowPlayingTrack.SongName</span>
+								</div>
+							}
+							else
+							{
+								<div>@nowPlayingTrack?.SongName</div>
+							}
+						</div>
 
-							<div style="height: 3px; background-color: #535353; border-radius: 2px; margin-top: 4px; overflow: hidden;">
-								<div style="height: 100%; background-color: #1db954; width: @(PlaybackProgress.ToString("F2"))%;"></div>
-							</div>
+						<div class="scrolling-container">
+							@if (!string.IsNullOrEmpty(nowPlayingTrack.Artist) && nowPlayingTrack.Artist.Length > 20)
+							{
+								<div class="scrolling-text artist">
+									<span>@nowPlayingTrack.Artist</span>
+									<span class="spacer">•</span>
+									<span>@nowPlayingTrack.Artist</span>
+								</div>
+							}
+							else
+							{
+								<div class="artist">@nowPlayingTrack?.Artist</div>
+							}
+						</div>
+
+						<div style="height: 3px; background-color: #535353; border-radius: 2px; margin-top: 4px; overflow: hidden;">
+							<div style="height: 100%; background-color: #1db954; width: @(PlaybackProgress)%;"></div>
 						</div>
 					</div>
-				}
-				else
-				{
-					<p style="color: #b3b3b3; font-size: 12px; margin: 0;">No song is currently playing.</p>
-				}
-			</div>
+				</div>
+			}
+			else
+			{
+				<p style="color: #b3b3b3; font-size: 12px; margin: 0;">No song is currently playing.</p>
+			}
 
 			<!-- Top Tracks Section -->
 			<div style="background-color: #121212; border: none; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" class="mb-4">
@@ -168,6 +173,7 @@
 	}
 </div>
 
+
 <style>
 	body {
 		background-color: #121212;
@@ -238,6 +244,7 @@
 </style>
 
 @code {
+	private string userProfilePictureUrl = "images/default-profile.png"; // Default profile picture
 	private bool isLoading = true;
 	private bool hasError = false;
 	private string errorMessage = "";
@@ -271,7 +278,28 @@
 
 			if (!string.IsNullOrEmpty(accessToken))
 			{
-				// We have a valid token, load dashboard data
+				// Fetch user profile data
+				var userProfile = await AuthService.GetUserProfile();
+				if (userProfile != null)
+				{
+					Console.WriteLine($"User profile fetched: {userProfile.DisplayName}");
+					Console.WriteLine($"Profile picture URL: {userProfile.ProfilePictureUrl}");
+
+					if (!string.IsNullOrEmpty(userProfile.ProfilePictureUrl))
+					{
+						userProfilePictureUrl = userProfile.ProfilePictureUrl;
+					}
+					else
+					{
+						Console.WriteLine("No profile picture found, using default.");
+					}
+				}
+				else
+				{
+					Console.WriteLine("User profile is null.");
+				}
+
+				// Load dashboard data
 				await LoadTopTracks(selectedTimeRange);
 				await LoadNowPlaying();
 
@@ -297,6 +325,7 @@
 			StateHasChanged();
 		}
 	}
+
 
 
 	private string GetSpotifyUriFromUrl(string url)

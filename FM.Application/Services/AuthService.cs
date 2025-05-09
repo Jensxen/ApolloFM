@@ -4,6 +4,7 @@ using FM.Application.Services.ServiceDTO;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Microsoft.JSInterop;
+using System.Text.Json;
 
 namespace FM.Application.Services
 {
@@ -35,17 +36,33 @@ namespace FM.Application.Services
             return !string.IsNullOrEmpty(token);
         }
 
-        public async Task<SpotifyUserProfile> GetUserProfile()
+        public async Task<SpotifyUserProfile?> GetUserProfile()
         {
             try
             {
-                return await GetApiDataAsync<SpotifyUserProfile>("api/auth/user");
+                var client = _httpClientFactory.CreateClient("ApolloAPI");
+                var response = await client.GetAsync("me");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var userProfile = JsonSerializer.Deserialize<SpotifyUserProfile>(json);
+
+                    Console.WriteLine($"Fetched user profile: {userProfile?.DisplayName}");
+                    Console.WriteLine($"Profile picture URL: {userProfile?.ProfilePictureUrl}");
+
+                    return userProfile;
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to fetch user profile. Status code: {response.StatusCode}");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving user profile: {ex.Message}");
-                return null;
+                Console.WriteLine($"Error fetching user profile: {ex.Message}");
             }
+
+            return null;
         }
 
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string timeRange = "medium_term")
@@ -60,7 +77,6 @@ namespace FM.Application.Services
                 throw;
             }
         }
-
 
 
         public async Task<SpotifyDataDTO?> GetCurrentlyPlayingTrackAsync()
@@ -187,10 +203,6 @@ namespace FM.Application.Services
                 _navigationManager.NavigateTo("/?error=authentication_failed");
             }
         }
-
-
-
-
 
         private async Task<T> GetApiDataAsync<T>(string endpoint)
         {

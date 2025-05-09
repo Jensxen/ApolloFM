@@ -137,11 +137,6 @@ namespace FM.Application.Services
             }
         }
 
-
-
-
-
-
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string accessToken, string timeRange = "short_term", int limit = 25)
         {
             _httpClient.DefaultRequestHeaders.Authorization =
