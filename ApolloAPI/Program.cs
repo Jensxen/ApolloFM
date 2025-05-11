@@ -7,8 +7,8 @@ using AspNet.Security.OAuth.Spotify;
 using Microsoft.EntityFrameworkCore;
 using FM.Infrastructure.Database;
 using Microsoft.AspNetCore.Authentication.OAuth;
-using FM.Application.Services;
 using Microsoft.AspNetCore.Authentication;
+using FM.Application.Services.SpotifyServices;
 
 var builder = WebApplication.CreateBuilder(args);
 

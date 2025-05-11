@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace FM.Application.Services.ServiceDTO
+namespace FM.Application.Services.ServiceDTO.SpotifyDTO
 {
     public class SpotifyDataDTO
     {

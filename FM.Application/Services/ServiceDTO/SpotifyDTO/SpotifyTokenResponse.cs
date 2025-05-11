@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace FM.Application.Services.ServiceDTO
+namespace FM.Application.Services.ServiceDTO.SpotifyDTO
 {
     public class SpotifyTokenResponse
     {

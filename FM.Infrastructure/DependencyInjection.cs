@@ -1,9 +1,12 @@
-﻿using FM.Infrastructure.Repositories;
+﻿// FM.Infrastructure/DependencyInjection.cs
+using FM.Application.Services.ForumServices;
+using FM.Application.Interfaces.IRepositories;
+using FM.Infrastructure.Repositories;
+using FM.Infrastructure.Repositories.ForumRepositories;
 using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using FM.Application.Interfaces.IRepositories;
 using FM.Application.Interfaces;
 using FM.Infrastucture.Repositories;
 
@@ -24,6 +27,9 @@ namespace FM.Infrastructure
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
 
+            // Register forum repositories and services
+            services.AddScoped<IForumRepository, ForumRepository>();
+            services.AddScoped<IForumService, ForumService>();
 
             // Register the UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -32,4 +38,3 @@ namespace FM.Infrastructure
         }
     }
 }
-

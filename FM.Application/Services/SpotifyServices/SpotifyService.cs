@@ -1,5 +1,4 @@
-﻿using FM.Application.Services.ServiceDTO;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
@@ -9,10 +8,11 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
-using static FM.Application.Services.AuthService;
+using static FM.Application.Services.AuthServices.AuthService;
 using System.Net.Http.Json;
+using FM.Application.Services.ServiceDTO.SpotifyDTO;
 
-namespace FM.Application.Services
+namespace FM.Application.Services.SpotifyServices
 {
     public class SpotifyService
     {

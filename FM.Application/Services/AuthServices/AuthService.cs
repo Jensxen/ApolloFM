@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components;
-using FM.Application.Services.ServiceDTO;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Microsoft.JSInterop;
 using System.Text.Json;
+using FM.Application.Services.ServiceDTO.SpotifyDTO;
 
-namespace FM.Application.Services
+namespace FM.Application.Services.AuthServices
 {
     public class AuthService
     {
@@ -166,7 +166,7 @@ namespace FM.Application.Services
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
                 // Send code in JSON body using POST
-                var responseMessage = await client.PostAsJsonAsync("api/auth/handle-state-error", new { code = code });
+                var responseMessage = await client.PostAsJsonAsync("api/auth/handle-state-error", new { code });
 
                 // Log the status
                 Console.WriteLine($"POST /api/auth/handle-state-error status: {(int)responseMessage.StatusCode} {responseMessage.StatusCode}");

@@ -5,10 +5,10 @@ using FM.Application.Interfaces.IQuery;
 using FM.Application.Query;
 using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
-using FM.Application.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication;
+using FM.Application.Services.SpotifyServices;
 
 namespace FM.Application
 {
@@ -33,6 +33,7 @@ namespace FM.Application
            
             // Services
             services.AddScoped<SpotifyService>();
+         
 
             if (!isApiContext)
             {

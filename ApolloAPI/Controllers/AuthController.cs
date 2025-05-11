@@ -1,5 +1,4 @@
 ﻿using AspNet.Security.OAuth.Spotify;
-using FM.Application.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using System.Linq.Expressions;
+using FM.Application.Services.SpotifyServices;
 
 [ApiController]
 [Route("api/auth")]
