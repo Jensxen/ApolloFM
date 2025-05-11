@@ -5,9 +5,12 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using static FM.Application.Services.AuthService;
+using System.Net.Http.Json;
 
 namespace FM.Application.Services
 {
@@ -47,11 +50,11 @@ namespace FM.Application.Services
 
                 // Create the form data for the token request
                 var formData = new Dictionary<string, string>
-        {
-            { "grant_type", "authorization_code" },
-            { "code", code },
-            { "redirect_uri", redirectUri }
-        };
+                {
+                    { "grant_type", "authorization_code" },
+                    { "code", code },
+                    { "redirect_uri", redirectUri }
+                };
 
                 _logger.LogInformation("Form data: grant_type={GrantType}, code={CodeStart}..., redirect_uri={RedirectUri}",
                     "authorization_code", code.Substring(0, Math.Min(5, code.Length)), redirectUri);
@@ -135,6 +138,77 @@ namespace FM.Application.Services
                 _logger.LogError(ex, "Error exchanging code for token: {ErrorMessage}", ex.Message);
                 return null;
             }
+        }
+
+        public async Task<List<SpotifyArtist>> GetTopArtistsAsync(string accessToken, string timeRange = "medium_term", int limit = 10)
+        {
+            if (string.IsNullOrEmpty(accessToken))
+                throw new ArgumentNullException(nameof(accessToken));
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await _httpClient.GetAsync($"me/top/artists?time_range={timeRange}&limit={limit}");
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var json = JsonDocument.Parse(content);
+            var items = json.RootElement.GetProperty("items");
+
+            return items.EnumerateArray().Select(artist => {
+                var imageUrl = artist.GetProperty("images").EnumerateArray()
+                    .FirstOrDefault().TryGetProperty("url", out var url) ? url.GetString() : null;
+
+                var genres = new List<string>();
+                if (artist.TryGetProperty("genres", out var genresElement))
+                {
+                    genres = genresElement.EnumerateArray()
+                        .Select(g => g.GetString())
+                        .Where(g => g != null)
+                        .ToList();
+                }
+
+                return new SpotifyArtist
+                {
+                    Id = artist.GetProperty("id").GetString(),
+                    Name = artist.GetProperty("name").GetString(),
+                    ImageUrl = imageUrl,
+                    Genres = genres,
+                    Popularity = artist.TryGetProperty("popularity", out var pop) ? pop.GetInt32() : 0
+                };
+            }).ToList();
+        }
+
+        public async Task<List<RecentlyPlayedTrack>> GetRecentlyPlayedAsync(string accessToken, int limit = 20)
+        {
+            if (string.IsNullOrEmpty(accessToken))
+                throw new ArgumentNullException(nameof(accessToken));
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await _httpClient.GetAsync($"me/player/recently-played?limit={limit}");
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var json = JsonDocument.Parse(content);
+            var items = json.RootElement.GetProperty("items");
+
+            return items.EnumerateArray().Select(item => {
+                var track = item.GetProperty("track");
+                var album = track.GetProperty("album");
+                var artists = track.GetProperty("artists");
+                var playedAt = DateTime.Parse(item.GetProperty("played_at").GetString());
+
+                return new RecentlyPlayedTrack
+                {
+                    SongName = track.GetProperty("name").GetString(),
+                    Artist = string.Join(", ", artists.EnumerateArray().Select(a => a.GetProperty("name").GetString())),
+                    Album = album.GetProperty("name").GetString(),
+                    AlbumImageUrl = album.GetProperty("images")[0].GetProperty("url").GetString(),
+                    SongUrl = track.GetProperty("external_urls").GetProperty("spotify").GetString(),
+                    Duration = TimeSpan.FromMilliseconds(track.GetProperty("duration_ms").GetInt32()),
+                    PlayedAt = playedAt
+                };
+            }).ToList();
         }
 
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string accessToken, string timeRange = "short_term", int limit = 25)
@@ -249,6 +323,21 @@ namespace FM.Application.Services
                 return null;
             }
         }
+    }
 
+    // Define this class if not already defined elsewhere
+    public class SpotifyArtist
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string ImageUrl { get; set; }
+        public List<string> Genres { get; set; } = new List<string>();
+        public int Popularity { get; set; }
+    }
+
+    // Define this class if not already defined elsewhere
+    public class RecentlyPlayedTrack : SpotifyDataDTO
+    {
+        public DateTime PlayedAt { get; set; }
     }
 }

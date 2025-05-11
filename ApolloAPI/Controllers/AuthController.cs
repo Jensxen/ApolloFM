@@ -121,7 +121,8 @@ public class AuthController : ControllerBase
                 user.DisplayName,
                 user.Email,
                 user.Id,
-                user.Images
+                Images = user.Images,
+                ProfilePictureUrl = user.Images?.FirstOrDefault()?.Url
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
@@ -136,6 +137,56 @@ public class AuthController : ControllerBase
             return BadRequest($"Error fetching user data: {ex.Message}");
         }
     }
+
+    [HttpGet("top-artists")]
+    public async Task<IActionResult> GetTopArtists([FromQuery] string timeRange = "medium_term", [FromQuery] int limit = 10)
+    {
+        var accessToken = await GetValidAccessTokenAsync();
+        if (string.IsNullOrEmpty(accessToken)) return Unauthorized("Access token is missing or invalid");
+
+        try
+        {
+            var topArtists = await _spotifyService.GetTopArtistsAsync(accessToken, timeRange, limit);
+            return Ok(topArtists);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogError("Unauthorized: {Message}", ex.Message);
+            _tokenService.ClearAccessTokens();
+            return Unauthorized("The access token is invalid or expired");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching top artists");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("recently-played")]
+    public async Task<IActionResult> GetRecentlyPlayed([FromQuery] int limit = 20)
+    {
+        var accessToken = await GetValidAccessTokenAsync();
+        if (string.IsNullOrEmpty(accessToken)) return Unauthorized("Access token is missing or invalid");
+
+        try
+        {
+            var recentTracks = await _spotifyService.GetRecentlyPlayedAsync(accessToken, limit);
+            return Ok(recentTracks);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogError("Unauthorized: {Message}", ex.Message);
+            _tokenService.ClearAccessTokens();
+            return Unauthorized("The access token is invalid or expired");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching recently played tracks");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+
 
     [HttpGet("top-tracks/all-time")]
     public async Task<IActionResult> GetTopTracksAllTime([FromQuery] int limit = 25)

@@ -40,29 +40,41 @@ namespace FM.Application.Services
         {
             try
             {
-                var client = _httpClientFactory.CreateClient("ApolloAPI");
-                var response = await client.GetAsync("me");
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var userProfile = JsonSerializer.Deserialize<SpotifyUserProfile>(json);
-
-                    Console.WriteLine($"Fetched user profile: {userProfile?.DisplayName}");
-                    Console.WriteLine($"Profile picture URL: {userProfile?.ProfilePictureUrl}");
-
-                    return userProfile;
-                }
-                else
-                {
-                    Console.WriteLine($"Failed to fetch user profile. Status code: {response.StatusCode}");
-                }
+                // Use GetApiDataAsync instead of direct client.GetAsync to ensure proper auth headers
+                var userProfile = await GetApiDataAsync<SpotifyUserProfile>("api/auth/user");
+                return userProfile;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching user profile: {ex.Message}");
+                await _jsRuntime.InvokeVoidAsync("console.error", $"Error fetching user profile: {ex.Message}");
+                return null;
             }
+        }
 
-            return null;
+        public async Task<List<SpotifyArtist>> GetTopArtistsAsync(string timeRange = "medium_term")
+        {
+            try
+            {
+                return await GetApiDataAsync<List<SpotifyArtist>>($"api/auth/top-artists?timeRange={timeRange}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting top artists: {ex.Message}");
+                return new List<SpotifyArtist>();
+            }
+        }
+
+        public async Task<List<RecentlyPlayedTrack>> GetRecentlyPlayedAsync(int limit = 20)
+        {
+            try
+            {
+                return await GetApiDataAsync<List<RecentlyPlayedTrack>>($"api/auth/recently-played?limit={limit}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting recently played: {ex.Message}");
+                return new List<RecentlyPlayedTrack>();
+            }
         }
 
         public async Task<List<SpotifyDataDTO>> GetTopTracksAsync(string timeRange = "medium_term")
@@ -96,8 +108,6 @@ namespace FM.Application.Services
                 throw;
             }
         }
-
-
 
         public async Task LogoutAsync()
         {
@@ -137,8 +147,6 @@ namespace FM.Application.Services
                 throw;
             }
         }
-
-
 
         public async Task HandleCallback(string code)
         {
@@ -300,6 +308,19 @@ namespace FM.Application.Services
             public string AccessToken { get; set; }
             public string RefreshToken { get; set; }
             public int ExpiresIn { get; set; }
+        }
+
+        public class SpotifyArtist
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string ImageUrl { get; set; }
+            public List<string> Genres { get; set; } = new List<string>();
+            public int Popularity { get; set; }
+        }
+        public class RecentlyPlayedTrack : SpotifyDataDTO
+        {
+            public DateTime PlayedAt { get; set; }
         }
 
 
