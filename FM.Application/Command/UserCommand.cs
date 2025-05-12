@@ -40,7 +40,7 @@ namespace FM.Application.Command
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = await _userRepository.GetUserByIdAsync(command.Id);
+                var user = await _userRepository.GetByIdAsync(command.Id);
                 if (user == null)
                 {
                     throw new Exception("User not found");
@@ -70,7 +70,7 @@ namespace FM.Application.Command
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = await _userRepository.GetUserByIdAsync(command.Id);
+                var user = await _userRepository.GetByIdAsync(command.Id);
                 if (user == null)
                 {
                     throw new Exception("User not found");

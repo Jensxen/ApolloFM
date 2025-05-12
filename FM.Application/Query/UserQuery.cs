@@ -28,7 +28,7 @@ namespace FM.Application.Query
 
         public async Task<UserQueryDTO> GetUserByIdAsync(string id)
         {
-            var user = await _userRepository.GetUserByIdAsync(id);
+            var user = await _userRepository.GetByIdAsync(id);
             if (user == null)
             {
                 return null;

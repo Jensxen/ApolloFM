@@ -20,7 +20,7 @@ namespace FM.Infrastructure.Database
         {
             // Configure UserRole relationship
             modelBuilder.Entity<User>()
-                .HasOne(u => u.UserRole)
+                .HasOne(u => u.Role)
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.UserRoleId);
 
@@ -37,13 +37,6 @@ namespace FM.Infrastructure.Database
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
                 .OnDelete(DeleteBehavior.Cascade); // Enable cascade delete
-
-            // Configure User-Comment relationship
-            modelBuilder.Entity<Comment>()
-                .HasOne(c => c.User)
-                .WithMany(u => u.Comments)
-                .HasForeignKey(c => c.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure UserRole-Permission relationship
             modelBuilder.Entity<UserRole>()

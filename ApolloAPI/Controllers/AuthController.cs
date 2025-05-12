@@ -2,17 +2,13 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
 using SpotifyAPI.Web;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.Configuration;
-using System.Linq.Expressions;
 using FM.Application.Services.SpotifyServices;
+using FM.Domain.Entities;
+using FM.Application.Interfaces.IRepositories;
+using FM.Application.Interfaces;
+using FM.Application.Services.ServiceDTO.UserDTO;
 
 [ApiController]
 [Route("api/auth")]
@@ -23,6 +19,8 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly TokenService _tokenService;
     private readonly string _clientAppUrl;
+    private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     private string GenerateAndStoreState()
     {
@@ -37,12 +35,16 @@ public class AuthController : ControllerBase
         ILogger<AuthController> logger,
         SpotifyService spotifyService,
         IConfiguration configuration,
-        TokenService tokenService)
+        TokenService tokenService,
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork)
     {
         _logger = logger;
         _spotifyService = spotifyService;
         _configuration = configuration;
         _tokenService = tokenService;
+        _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
         _clientAppUrl = _configuration["AppSettings:ClientAppUrl"] ?? "https://localhost:7210";
 
         _logger.LogInformation("ClientAppUrl configured as: {ClientAppUrl}", _clientAppUrl);
@@ -309,6 +311,59 @@ public class AuthController : ControllerBase
         return Redirect(authorizationEndpoint);
     }
 
+    // In your AuthController or a UserController
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserRequest request)
+    {
+        if (string.IsNullOrEmpty(request.SpotifyUserId) || string.IsNullOrEmpty(request.DisplayName))
+        {
+            return BadRequest("SpotifyUserId and DisplayName are required");
+        }
+
+        try
+        {
+            // Begin transaction
+            await _unitOfWork.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+
+            try
+            {
+                // Check if user already exists
+                var existingUser = await _userRepository.GetBySpotifyIdAsync(request.SpotifyUserId);
+                if (existingUser != null)
+                {
+                    await _unitOfWork.CommitAsync();
+                    return Ok(existingUser); // User already registered
+                }
+
+                // Create new user
+                var newUser = new User(
+                    request.SpotifyUserId,
+                    request.DisplayName,
+                    request.SpotifyUserId,
+                    1 // Default user role ID
+                );
+
+                await _userRepository.AddUserAsync(newUser);
+                await _unitOfWork.CommitAsync();
+
+                return Ok(newUser);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackAsync();
+                _logger.LogError(ex, "Error during manual user registration, transaction rolled back");
+                return StatusCode(500, "An error occurred while registering the user");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in RegisterUser endpoint");
+            return StatusCode(500, "An unexpected error occurred");
+        }
+    }
+
+
+
     [HttpGet("logout")]
     public IActionResult Logout(string returnUrl = null)
     {
@@ -349,12 +404,6 @@ public class AuthController : ControllerBase
         _logger.LogInformation("Spotify OAuth callback received with code length: {CodeLength}, state length: {StateLength}",
             code?.Length ?? 0, state?.Length ?? 0);
 
-        if (string.IsNullOrEmpty(code))
-        {
-            _logger.LogError("Authorization code is missing.");
-            return Redirect($"{_clientAppUrl}?error=missing_code");
-        }
-
         var clientId = _configuration["Spotify:ClientId"];
         var clientSecret = _configuration["Spotify:ClientSecret"];
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
@@ -372,7 +421,22 @@ public class AuthController : ControllerBase
         _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
         _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
 
-        // For client-side auth, also append the token to the redirect URL as a fragment
+        // Get user profile from Spotify and register user
+        try
+        {
+            var userProfile = await GetSpotifyUserProfile(tokenResponse.AccessToken);
+            if (userProfile != null)
+            {
+                await RegisterOrUpdateUser(userProfile);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error registering user after authentication");
+            // Continue with the flow even if registration fails
+        }
+
+        // For client-side auth, append the token to the redirect URL as a fragment
         var redirectUrl = $"{_clientAppUrl}/spotify-callback?code={Uri.EscapeDataString(code)}";
 
         // Include the original state if available
@@ -384,6 +448,99 @@ public class AuthController : ControllerBase
         _logger.LogInformation("Successfully exchanged code for token. Redirecting to {RedirectUrl}", redirectUrl);
         return Redirect(redirectUrl);
     }
+
+    // Helper method to get user profile from Spotify
+    private async Task<SpotifyAPI.Web.PrivateUser> GetSpotifyUserProfile(string accessToken)
+    {
+        try
+        {
+            var config = SpotifyClientConfig.CreateDefault().WithToken(accessToken);
+            var spotify = new SpotifyClient(config);
+            return await spotify.UserProfile.Current();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching user profile from Spotify");
+            return null;
+        }
+    }
+
+    // Helper method to register or update user
+    private async Task<User> RegisterOrUpdateUser(SpotifyAPI.Web.PrivateUser spotifyUser)
+    {
+        if (spotifyUser == null)
+        {
+            _logger.LogWarning("Cannot register null user profile");
+            return null;
+        }
+
+        try
+        {
+            // Start a transaction
+            await _unitOfWork.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+
+            try
+            {
+                // Check if user already exists
+                var existingUser = await _userRepository.GetBySpotifyIdAsync(spotifyUser.Id);
+
+                if (existingUser != null)
+                {
+                    // Update user details if needed
+                    bool needsUpdate = false;
+
+                    if (existingUser.DisplayName != spotifyUser.DisplayName && !string.IsNullOrEmpty(spotifyUser.DisplayName))
+                    {
+                        existingUser.UpdateDisplayName(spotifyUser.DisplayName);
+                        needsUpdate = true;
+                    }
+
+                    // Add other fields to update if needed
+
+                    if (needsUpdate)
+                    {
+                        await _userRepository.UpdateUserAsync(existingUser);
+                        await _unitOfWork.CommitAsync();
+                        _logger.LogInformation("Updated existing user: {UserId}", existingUser.Id);
+                    }
+
+                    return existingUser;
+                }
+
+                // Create new user
+                var defaultRole = 1; // Assuming 1 is the "User" role ID
+
+                var newUser = new User(
+                    spotifyUser.Id,
+                    spotifyUser.DisplayName ?? "Spotify User",
+                    spotifyUser.Id,
+                    defaultRole
+                );
+
+                await _userRepository.AddUserAsync(newUser);
+
+                // Commit the transaction
+                await _unitOfWork.CommitAsync();
+
+                _logger.LogInformation("Registered new user: {UserId}", newUser.Id);
+                return newUser;
+            }
+            catch (Exception ex)
+            {
+                // If anything goes wrong, rollback the transaction
+                await _unitOfWork.RollbackAsync();
+                _logger.LogError(ex, "Error during user registration, transaction rolled back");
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error registering/updating user in database");
+            return null;
+        }
+    }
+
+
 
 
 

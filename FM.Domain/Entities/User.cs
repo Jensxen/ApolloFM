@@ -13,20 +13,13 @@ namespace FM.Domain.Entities
         public string DisplayName { get; protected set; }
         public string SpotifyUserId { get; protected set; } // Spotify user ID
         public int UserRoleId { get; protected set; }
-        public UserRole UserRole { get; protected set; }
-        public ICollection<Post> Posts { get; protected set; } = new List<Post>();
-        public ICollection<Comment> Comments { get; protected set; } = new List<Comment>();
+        public UserRole? Role { get; protected set; }
 
         [Timestamp]
         public byte[] RowVersion { get; protected set; }
 
 
-        //protected User() { }
-
-        public User()
-        {
-
-        }
+        protected User() { }
 
         // Constructor to set initial values including Id
         public User(string id, string displayName, string spotifyUserId, int userRoleId)
@@ -39,7 +32,10 @@ namespace FM.Domain.Entities
 
         public void UpdateDisplayName(string displayName)
         {
-            DisplayName = displayName;
+            if (!string.IsNullOrEmpty(displayName))
+            {
+                DisplayName = displayName;
+            }
         }
 
         public void UpdateSpotifyUserId(string spotifyUserId)

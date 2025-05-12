@@ -26,7 +26,7 @@ namespace FM.Application.Command
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = await _userRepository.GetUserByIdAsync(command.UserId);
+                var user = await _userRepository.GetByIdAsync(command.UserId);
                 var post = await _postRepository.GetPostByIdAsync(command.PostId);
 
                 if (user == null)

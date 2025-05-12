@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿// FM.Infrastructure/Repositories/UserRepository.cs
 using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
 using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace FM.Infrastructure.Repositories
 {
@@ -15,36 +16,43 @@ namespace FM.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<User> GetUserByIdAsync(string id)
+        public async Task<User?> GetByIdAsync(string id)
         {
             return await _context.Users.FindAsync(id);
+        }
+
+        public async Task<User?> GetBySpotifyIdAsync(string spotifyId)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.SpotifyUserId == spotifyId);
         }
 
         public async Task AddUserAsync(User user)
         {
             await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<User>> GetAllAsync(int limit = 100)
+        {
+            return await _context.Users.Take(limit).ToListAsync();
         }
 
         public async Task UpdateUserAsync(User user)
         {
             _context.Users.Update(user);
-            await _context.SaveChangesAsync();
         }
-
         public async Task DeleteUserAsync(string id, byte[] rowVersion)
         {
+            // Option 1: If User has soft delete functionality
             var user = await _context.Users.FindAsync(id);
             if (user == null)
-            {
-                throw new Exception("User not found");
-            }
+                return;
 
-            _context.Entry(user).Property(u => u.RowVersion).OriginalValue = rowVersion;
+            // Check if rowVersion matches
+            if (!user.RowVersion.SequenceEqual(rowVersion))
+                throw new DbUpdateConcurrencyException("The user has been modified by someone else.");
+
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
         }
     }
 }
-
-

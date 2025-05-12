@@ -21,34 +21,85 @@ namespace FM.Application.Command
             _subForumRepository = subForumRepository;
         }
 
-         async Task IPostCommand.CreatePostAsync(CreatePostCommandDTO command)
+        async Task IPostCommand.CreatePostAsync(CreatePostCommandDTO command)
         {
+            // Normalize the userId and log key information
+            var originalUserId = command.UserId?.Trim();
+            Console.WriteLine($"Creating post with UserId: '{originalUserId}'");
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var user = await _userRepository.GetUserByIdAsync(command.UserId);
-                var subForum = await _subForumRepository.GetSubForumByIdAsync(command.SubForumId);
+                // Check if we have a direct ID match
+                var user = await _userRepository.GetByIdAsync(originalUserId);
+                Console.WriteLine($"GetByIdAsync result for '{originalUserId}': {(user != null ? "Found" : "Not Found")}");
 
+                // If not, try finding by SpotifyId
                 if (user == null)
                 {
-                    throw new Exception("User not found");
+                    Console.WriteLine($"Looking for user by SpotifyId: '{originalUserId}'");
+                    user = await _userRepository.GetBySpotifyIdAsync(originalUserId);
+                    Console.WriteLine($"GetBySpotifyIdAsync result: {(user != null ? "Found" : "Not Found")}");
+
+                    if (user != null)
+                    {
+                        // HERE IS THE KEY FIX! Use the actual database ID from the User table
+                        command.UserId = user.Id;
+                        Console.WriteLine($"IMPORTANT: Using database ID from found user: '{user.Id}' instead of '{originalUserId}'");
+                    }
+                    else
+                    {
+                        // No user found at all - check what IDs exactly we're using
+                        Console.WriteLine("ERROR: User not found by any method. This is a critical error.");
+                        Console.WriteLine($"Original UserId: '{originalUserId}'");
+
+                        // Specific diagnostic for popular Spotify IDs
+                        if (originalUserId?.Length == 25 && !originalUserId.Contains("-"))
+                        {
+                            Console.WriteLine("This appears to be a Spotify ID format (25 chars, no hyphens)");
+                            Console.WriteLine("The database is likely expecting a different ID format (e.g., UUID/GUID with hyphens)");
+                        }
+
+                        throw new Exception($"User not found with ID: {originalUserId}");
+                    }
                 }
+
+                var subForum = await _subForumRepository.GetSubForumByIdAsync(command.SubForumId);
                 if (subForum == null)
                 {
                     throw new Exception("Sub Forum not found");
                 }
 
-                var post = new Post(command.Title, command.Content, command.SpotifyPlaylistId, command.UserId, command.SubForumId);
+                // CRITICAL: Use the correct UserId - potentially translated from SpotifyId to DB Id
+                Console.WriteLine($"Creating Post with UserId: '{command.UserId}'");
+                var post = new Post(
+                    command.Title,
+                    command.Content,
+                    string.IsNullOrEmpty(command.SpotifyPlaylistId) ? "none" : command.SpotifyPlaylistId,
+                    command.UserId,  // This should now be the correct DB ID
+                    command.SubForumId
+                );
 
                 await _postRepository.AddPostAsync(post);
+                Console.WriteLine("About to commit transaction...");
                 await _unitOfWork.CommitAsync();
+                Console.WriteLine("Transaction committed successfully");
             }
-            catch
+            catch (Exception ex)
             {
                 await _unitOfWork.RollbackAsync();
+                Console.WriteLine($"ERROR in CreatePostAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+
                 throw;
             }
         }
+
 
         async Task IPostCommand.UpdatePostAsync(UpdatePostCommandDTO command)
         {
