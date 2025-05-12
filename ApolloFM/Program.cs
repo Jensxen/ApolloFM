@@ -2,7 +2,7 @@ using ApolloFM;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
-using Blazored.LocalStorage;
+using FM.Infrastructure;
 using FM.Application;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -47,6 +47,8 @@ builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddApplicationServices(isApiContext: false, registerAuthenticationProvider: false);
 
+builder.Services.AddInfrastructure(builder.Configuration, isWebAssembly: true);
+
 builder.Services.AddScoped<AuthService>(provider =>
 {
     var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
@@ -68,8 +70,6 @@ builder.Services.AddScoped(sp => new AuthInteropService(
     sp.GetRequiredService<AuthenticationStateProvider>(),
     sp.GetRequiredService<NavigationManager>()
 ));
-
-builder.Services.AddScoped<IForumService, ForumService>();
 
 builder.Services.AddTransient<SpotifyTokenHandler>();
 builder.Services.AddHttpClient("SpotifyAPIAuth", client =>

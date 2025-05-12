@@ -30,6 +30,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\FM.Application\FM.Application.csproj" />
 		<ProjectReference Include="..\FM.Domain\FM.Domain.csproj" />
+		<ProjectReference Include="..\FM.Infrastructure\FM.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

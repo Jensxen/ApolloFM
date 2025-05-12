@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication;
 using FM.Application.Services.SpotifyServices;
+using FM.Application.Services.ForumServices;
 
 namespace FM.Application
 {
@@ -29,11 +30,12 @@ namespace FM.Application
             services.AddScoped<ISubForumQuery, SubForumQuery>();
             services.AddScoped<IPostQuery, PostQuery>();
             services.AddScoped<IUserQuery, UserQuery>();
-
+           
            
             // Services
             services.AddScoped<SpotifyService>();
-         
+            services.AddScoped<IForumService, ForumService>();
+
 
             if (!isApiContext)
             {

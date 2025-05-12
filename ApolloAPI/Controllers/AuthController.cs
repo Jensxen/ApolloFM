@@ -298,7 +298,7 @@ public class AuthController : ControllerBase
     {
         {"response_type", "code"},
         {"client_id", clientId},
-        {"scope", "user-read-private user-read-email user-top-read user-read-currently-playing"},
+        {"scope", "user-read-private user-read-email user-top-read user-read-currently-playing user-read-playback-state user-read-recently-played"},
         {"redirect_uri", redirectUri},
         {"state", state}
     };

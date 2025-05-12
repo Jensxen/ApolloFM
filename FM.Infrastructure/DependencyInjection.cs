@@ -9,31 +9,46 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using FM.Application.Interfaces;
 using FM.Infrastucture.Repositories;
+using FM.Infrastructure.Repositories.WebAssembly;
 
 namespace FM.Infrastructure
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isWebAssembly = false)
         {
-            // Register the DbContext
-            services.AddDbContext<ApolloContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            if (isWebAssembly)
+            {
+                // WebAssembly-specific registrations (no database context)
+                services.AddScoped<IForumRepository, WebForumRepository>();
+                // Add other WebAssembly-specific repositories as needed
+                
+                // Still register the service
+                services.AddScoped<IForumService, ForumService>();
+            }
+            else
+            {
+                // Server-side registrations
+                
+                // Register the DbContext
+                services.AddDbContext<ApolloContext>(options =>
+                    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-            // Register the repositories
-            services.AddScoped<ISubForumRepository, SubForumRepository>();
-            services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IPostRepository, PostRepository>();
-            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
-            services.AddScoped<ICommentRepository, CommentRepository>();
+                // Register the repositories
+                services.AddScoped<ISubForumRepository, SubForumRepository>();
+                services.AddScoped<IUserRepository, UserRepository>();
+                services.AddScoped<IPostRepository, PostRepository>();
+                services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+                services.AddScoped<ICommentRepository, CommentRepository>();
+                services.AddScoped<IForumRepository, ForumRepository>();
 
-            // Register forum repositories and services
-            services.AddScoped<IForumRepository, ForumRepository>();
-            services.AddScoped<IForumService, ForumService>();
-
-            // Register the UnitOfWork
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
-
+                // Register the UnitOfWork (only needed on server-side)
+                services.AddScoped<IUnitOfWork, UnitOfWork>();
+                
+                // Register forum services
+                services.AddScoped<IForumService, ForumService>();
+            }
+            
             return services;
         }
     }
