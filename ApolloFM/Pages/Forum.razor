@@ -7,823 +7,908 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
-<div class="app-container">
-	<div class="sidebar">
-		<div class="sidebar-logo">
-			<img src="images/ApolloFM.png" alt="ApolloFM Logo" />
-		</div>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <img src="images/ApolloFM.png" alt="ApolloFM Logo" />
+    </div>
 
-		<div class="sidebar-menu">
-			<NavLink class="sidebar-item" href="dashboard">
-				<i class="fas fa-home"></i>
-				<span>Dashboard</span>
-			</NavLink>
+    <div class="sidebar-menu">
+        <NavLink class="sidebar-item" href="dashboard">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </NavLink>
 
-			<NavLink class="sidebar-item" href="forum" Match="NavLinkMatch.All">
-				<i class="fas fa-comments"></i>
-				<span>Forum</span>
-			</NavLink>
+        <NavLink class="sidebar-item" href="forum" Match="NavLinkMatch.All">
+            <i class="fas fa-comments"></i>
+            <span>Forum</span>
+        </NavLink>
 
-			<NavLink class="sidebar-item" href="discover">
-				<i class="fas fa-compass"></i>
-				<span>Discover</span>
-			</NavLink>
+        <NavLink class="sidebar-item" href="discover">
+            <i class="fas fa-compass"></i>
+            <span>Discover</span>
+        </NavLink>
 
-			<NavLink class="sidebar-item" href="playlists">
-				<i class="fas fa-list"></i>
-				<span>Playlists</span>
-			</NavLink>
+        <NavLink class="sidebar-item" href="playlists">
+            <i class="fas fa-list"></i>
+            <span>Playlists</span>
+        </NavLink>
 
-			<NavLink class="sidebar-item" href="profile">
-				<i class="fas fa-user"></i>
-				<span>Profile</span>
-			</NavLink>
-		</div>
+        <NavLink class="sidebar-item" href="profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </NavLink>
+    </div>
 
-		<div class="sidebar-footer">
-			<button class="logout-btn" @onclick="GoToDashboard">
-				<i class="fas fa-arrow-left"></i>
-			</button>
-		</div>
-	</div>
+    <div class="sidebar-footer">
+        <div class="user-profile">
+            <img src="images/default-profile.jpg" alt="User Profile" />
+            <span>Spotify User</span>
+        </div>
+        <button class="logout-btn" @onclick="GoToDashboard">
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+    </div>
+</div>
 
-	<div class="main-content">
-		<div class="top-bar">
-			<h1>Music Forum</h1>
-		</div>
+<!-- Main Content -->
+<div class="main-content">
+    <div class="top-bar">
+        <h1>Music Forum</h1>
+        <div class="user-profile-mini">
+            <img src="images/default-profile.jpg" alt="User Profile Picture" />
+        </div>
+    </div>
 
-		<div class="content-area">
-			@if (isLoading)
-			{
-				<div class="loading-spinner">
-					<div class="spinner-border text-primary" role="status">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-					<p class="mt-3">Loading forum data...</p>
-				</div>
-			}
-			else if (hasError)
-			{
-				<div class="alert alert-danger">
-					<h4>Error Loading Forum</h4>
-					<p>@errorMessage</p>
-					<button class="btn btn-outline-light mt-2" @onclick="RetryLoading">
-						<i class="fas fa-sync-alt me-2"></i> Retry
-					</button>
-				</div>
-			}
-			else
-			{
-				<!-- Subforum filter -->
-				<div class="content-card mb-4">
-					<div class="card-header">
-						<div class="d-flex justify-content-between align-items-center">
-							<h3>Categories</h3>
-							<div>
-								<select class="form-select" @bind="selectedSubForumId">
-									<option value="0">All Categories</option>
-									@foreach (var subforum in subForums)
-									{
-										<option value="@subforum.Id">@subforum.Name</option>
-									}
-								</select>
-							</div>
-						</div>
-					</div>
-				</div>
+    <div class="content-area">
+        @if (isLoading)
+        {
+            <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Loading forum data...</p>
+            </div>
+        }
+        else if (hasError)
+        {
+            <div class="alert alert-danger">
+                <h4>Error Loading Forum</h4>
+                <p>@errorMessage</p>
+                <button class="btn btn-outline-light mt-2" @onclick="RetryLoading">
+                    <i class="fas fa-sync-alt me-2"></i> Retry
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Subforum filter -->
+            <div class="content-card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>Categories</h3>
+                        <div>
+                            <select class="form-select" @bind="selectedSubForumId">
+                                <option value="0">All Categories</option>
+                                @foreach (var subforum in subForums)
+                                {
+                                    <option value="@subforum.Id">@subforum.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-				<div class="content-card">
-					<div class="card-header">
-						<div class="d-flex justify-content-between align-items-center">
-							<h3>Recent Discussions</h3>
-							<button class="btn btn-primary" @onclick="ShowCreateTopicModal">
-								<i class="fas fa-plus me-1"></i> New Topic
-							</button>
-						</div>
-					</div>
-					<div class="card-body">
-						@if (filteredTopics.Count == 0)
-						{
-							<div class="text-center p-4">
-								<p class="text-muted">No discussions found. Be the first to start a conversation!</p>
-							</div>
-						}
-						else
-						{
-							<div class="forum-list">
-								@foreach (var topic in filteredTopics)
-								{
-									<div class="forum-item" @onclick="() => NavigateToTopic(topic.Id)">
-										<div class="forum-icon">
-											<i class="@topic.Icon"></i>
-										</div>
-										<div class="forum-details">
-											<h4>@topic.Title</h4>
-											<p>@GetContentSummary(topic.Content)</p>
-											<div class="forum-meta">
-												<span><i class="fas fa-user me-1"></i> @topic.AuthorName</span>
-												<span><i class="fas fa-clock me-1"></i> @FormatTimeAgo(topic.CreatedAt)</span>
-												<span><i class="fas fa-comment me-1"></i> @topic.CommentCount</span>
-												<span><i class="fas fa-folder me-1"></i> @topic.SubForumName</span>
-											</div>
-										</div>
-										<div class="forum-activity">
-											<div class="activity-indicator @(IsActiveDiscussion(topic) ? "active" : "")"></div>
-										</div>
-									</div>
-								}
-							</div>
-						}
-					</div>
-				</div>
-			}
-		</div>
-	</div>
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>Recent Discussions</h3>
+                        <button class="btn btn-primary" @onclick="ShowCreateTopicModal">
+                            <i class="fas fa-plus me-1"></i> New Topic
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (filteredTopics.Count == 0)
+                    {
+                        <div class="text-center p-4">
+                            <p class="text-muted">No discussions found. Be the first to start a conversation!</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="forum-list">
+                            @foreach (var topic in filteredTopics)
+                            {
+                                <div class="forum-item" @onclick="() => NavigateToTopic(topic.Id)">
+                                    <div class="forum-icon">
+                                        <i class="@topic.Icon"></i>
+                                    </div>
+                                    <div class="forum-details">
+                                        <h4>@topic.Title</h4>
+                                        <p>@GetContentSummary(topic.Content)</p>
+                                        <div class="forum-meta">
+                                            <span><i class="fas fa-user me-1"></i> @topic.AuthorName</span>
+                                            <span><i class="fas fa-clock me-1"></i> @FormatTimeAgo(topic.CreatedAt)</span>
+                                            <span><i class="fas fa-comment me-1"></i> @topic.CommentCount</span>
+                                            <span><i class="fas fa-folder me-1"></i> @topic.SubForumName</span>
+                                        </div>
+                                    </div>
+                                    <div class="forum-activity">
+                                        <div class="activity-indicator @(IsActiveDiscussion(topic) ? "active" : "")"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
 </div>
 
 @if (showCreateTopicModal)
 {
-	<div class="modal-backdrop" @onclick="CloseCreateTopicModal"></div>
-	<div class="modal show d-block" tabindex="-1">
-		<div class="modal-dialog" @onclick:stopPropagation="true">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title">Create New Discussion</h5>
-					<button type="button" class="btn-close" @onclick="CloseCreateTopicModal"></button>
-				</div>
-				<div class="modal-body">
-					<div class="mb-3">
-						<label for="topicTitle" class="form-label">Title</label>
-						<input type="text" class="form-control" id="topicTitle" @bind="newTopic.Title"
-							   placeholder="What do you want to discuss?" />
-						@if (!string.IsNullOrEmpty(titleError))
-						{
-							<div class="text-danger mt-1">@titleError</div>
-						}
-					</div>
+    <div class="modal-backdrop" @onclick="CloseCreateTopicModal"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Discussion</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateTopicModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="topicTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="topicTitle" @bind="newTopic.Title"
+                               placeholder="What do you want to discuss?" />
+                        @if (!string.IsNullOrEmpty(titleError))
+                        {
+                            <div class="text-danger mt-1">@titleError</div>
+                        }
+                    </div>
 
-					<div class="mb-3">
-						<label for="topicContent" class="form-label">Content</label>
-						<textarea class="form-control" id="topicContent" @bind="newTopic.Content" rows="5"
-								  placeholder="Share your thoughts..."></textarea>
-						@if (!string.IsNullOrEmpty(contentError))
-						{
-							<div class="text-danger mt-1">@contentError</div>
-						}
-					</div>
+                    <div class="mb-3">
+                        <label for="topicContent" class="form-label">Content</label>
+                        <textarea class="form-control" id="topicContent" @bind="newTopic.Content" rows="5"
+                                  placeholder="Share your thoughts..."></textarea>
+                        @if (!string.IsNullOrEmpty(contentError))
+                        {
+                            <div class="text-danger mt-1">@contentError</div>
+                        }
+                    </div>
 
-					<div class="mb-3">
-						<label for="topicSubforum" class="form-label">Category</label>
-						<select class="form-control" id="topicSubforum" @bind="newTopic.SubForumId">
-							@foreach (var subforum in subForums)
-							{
-								<option value="@subforum.Id">@subforum.Name</option>
-							}
-						</select>
-					</div>
+                    <div class="mb-3">
+                        <label for="topicSubforum" class="form-label">Category</label>
+                        <select class="form-control" id="topicSubforum" @bind="newTopic.SubForumId">
+                            @foreach (var subforum in subForums)
+                            {
+                                <option value="@subforum.Id">@subforum.Name</option>
+                            }
+                        </select>
+                    </div>
 
-					<div class="mb-3">
-						<label class="form-label">Icon</label>
-						<div class="d-flex flex-wrap icon-selector">
-							@foreach (var icon in availableIcons)
-							{
-								<div class="icon-option @(newTopic.Icon == icon ? "selected" : "")"
-									 @onclick="() => SelectIcon(icon)">
-									<i class="@icon"></i>
-								</div>
-							}
-						</div>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" @onclick="CloseCreateTopicModal">Cancel</button>
-					<button type="button" class="btn btn-primary" @onclick="CreateTopic" disabled="@isSubmitting">
-						@if (isSubmitting)
-						{
-							<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-							<span class="ms-1">Creating...</span>
-						}
-						else
-						{
-							<span>Create Topic</span>
-						}
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
+                    <div class="mb-3">
+                        <label class="form-label">Icon</label>
+                        <div class="d-flex flex-wrap icon-selector">
+                            @foreach (var icon in availableIcons)
+                            {
+                                <div class="icon-option @(newTopic.Icon == icon ? "selected" : "")"
+                                     @onclick="() => SelectIcon(icon)">
+                                    <i class="@icon"></i>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCreateTopicModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="CreateTopic" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span class="ms-1">Creating...</span>
+                        }
+                        else
+                        {
+                            <span>Create Topic</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 <style>
-	/* Basic Layout Styling */
-	.app-container {
-		display: flex;
-		height: 100vh;
-		width: 100%;
-		background-color: #121212;
-		color: white;
-	}
+    /* Main Layout */
+    body {
+        background-color: #121212;
+        margin: 0;
+        padding: 0;
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden;
+    }
 
-	/* Sidebar Styling */
-	.sidebar {
-		width: 220px;
-		height: 100%;
-		background-color: #000000;
-		padding: 20px 0;
-		display: flex;
-		flex-direction: column;
-		position: fixed;
-		left: 0;
-		top: 0;
-		bottom: 0;
-	}
+    /* Sidebar Styles */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 220px;
+        background-color: #000000;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #282828;
+        z-index: 100;
+    }
 
-	.sidebar-logo {
-		padding: 0 20px 30px;
-		text-align: center;
-	}
+    .sidebar-logo {
+        padding: 20px;
+        text-align: center;
+    }
 
-		.sidebar-logo img {
-			max-width: 120px;
-			height: auto;
-		}
+    .sidebar-logo img {
+        max-width: 140px;
+    }
 
-	.sidebar-menu {
-		flex-grow: 1;
-	}
+    .sidebar-menu {
+        flex: 1;
+        padding: 10px 0;
+    }
 
-	.sidebar-item {
-		display: flex;
-		align-items: center;
-		padding: 12px 20px;
-		color: #b3b3b3;
-		text-decoration: none;
-		transition: all 0.3s;
-	}
+    .sidebar-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: #b3b3b3;
+        text-decoration: none;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
 
-		.sidebar-item:hover, .sidebar-item.active {
-			color: white;
-			background-color: #282828;
-		}
+    .sidebar-item:hover {
+        color: white;
+        background-color: #1a1a1a;
+    }
 
-		.sidebar-item i {
-			width: 24px;
-			margin-right: 8px;
-			text-align: center;
-		}
+    .sidebar-item.active {
+        color: white;
+        border-left: 3px solid #1db954;
+        background-color: #1a1a1a;
+    }
 
-	.sidebar-footer {
-		padding: 20px;
-		border-top: 1px solid #282828;
-	}
+    .sidebar-item i {
+        width: 24px;
+        font-size: 18px;
+        margin-right: 12px;
+    }
 
-	.logout-btn {
-		width: 100%;
-		background-color: transparent;
-		color: #b3b3b3;
-		border: 1px solid #333;
-		border-radius: 4px;
-		padding: 8px;
-		cursor: pointer;
-		transition: all 0.3s;
-	}
+    .sidebar-footer {
+        padding: 15px;
+        border-top: 1px solid #282828;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-		.logout-btn:hover {
-			background-color: #333;
-			color: white;
-		}
+    .user-profile {
+        display: flex;
+        align-items: center;
+    }
 
-	/* Main Content Styling */
-	.main-content {
-		flex-grow: 1;
-		margin-left: 220px;
-		padding: 20px;
-		height: 100%;
-		overflow-y: auto;
-	}
+    .user-profile img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin-right: 10px;
+        object-fit: cover;
+    }
 
-	.top-bar {
-		margin-bottom: 20px;
-		padding-bottom: 10px;
-		border-bottom: 1px solid #333;
-	}
+    .user-profile span {
+        font-size: 14px;
+        color: #fff;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
-		.top-bar h1 {
-			font-size: 28px;
-			font-weight: 700;
-			margin: 0;
-		}
+    .logout-btn {
+        background: none;
+        border: none;
+        color: #b3b3b3;
+        cursor: pointer;
+        padding: 5px;
+        transition: color 0.2s;
+    }
 
-	/* Content Cards Styling */
-	.content-card {
-		background-color: #1e1e1e;
-		border-radius: 8px;
-		overflow: hidden;
-		margin-bottom: 20px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	}
+    .logout-btn:hover {
+        color: #1db954;
+    }
 
-	.card-header {
-		background-color: #282828;
-		padding: 15px;
-		border-bottom: 1px solid #333;
-	}
+    /* Main Content Area */
+    .main-content {
+        margin-left: 220px;
+        padding: 20px;
+        height: 100vh;
+        overflow-y: auto;
+    }
 
-		.card-header h3 {
-			margin: 0;
-			font-size: 18px;
-			font-weight: 600;
-		}
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
 
-	.card-body {
-		padding: 15px;
-	}
+    .top-bar h1 {
+        font-size: 28px;
+        margin: 0;
+        font-weight: 700;
+    }
 
-	/* Forum Specific Styles */
-	.forum-list {
-		display: flex;
-		flex-direction: column;
-	}
+    .user-profile-mini {
+        display: none; /* Hidden because we have it on sidebar */
+    }
 
-	.forum-item {
-		display: flex;
-		padding: 15px;
-		border-bottom: 1px solid #333;
-		cursor: pointer;
-		transition: background-color 0.2s;
-	}
+    .user-profile-mini img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
 
-		.forum-item:last-child {
-			border-bottom: none;
-		}
+    .content-area {
+        padding-bottom: 40px;
+    }
 
-		.forum-item:hover {
-			background-color: #282828;
-		}
+    /* Loading Spinner */
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        color: #b3b3b3;
+    }
 
-	.forum-icon {
-		width: 40px;
-		height: 40px;
-		background-color: #333;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-right: 15px;
-		color: #1db954;
-		font-size: 18px;
-	}
+    /* Content Cards Styling */
+    .content-card {
+        background-color: #181818;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
 
-	.forum-details {
-		flex-grow: 1;
-	}
+    .card-header {
+        background-color: #282828;
+        padding: 20px;
+        border-bottom: 1px solid #333;
+    }
 
-		.forum-details h4 {
-			margin: 0 0 5px;
-			font-size: 16px;
-			font-weight: 600;
-		}
+    .card-header h3 {
+        margin: 0;
+        font-size: 20px;
+        color: #fff;
+        font-weight: 700;
+    }
 
-		.forum-details p {
-			color: #b3b3b3;
-			margin: 0 0 10px;
-			font-size: 14px;
-		}
+    .card-body {
+        padding: 0;
+    }
 
-	.forum-meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 15px;
-		font-size: 12px;
-		color: #888;
-	}
+    /* Forum Specific Styles */
+    .forum-list {
+        display: flex;
+        flex-direction: column;
+    }
 
-	.forum-activity {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		margin-left: 15px;
-	}
+    .forum-item {
+        display: flex;
+        padding: 15px 20px;
+        border-bottom: 1px solid #282828;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
 
-	.activity-indicator {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		background-color: #444;
-	}
+    .forum-item:last-child {
+        border-bottom: none;
+    }
 
-		.activity-indicator.active {
-			background-color: #1db954;
-		}
+    .forum-item:hover {
+        background-color: #282828;
+    }
 
-	/* Form Styling */
-	.form-select, .form-control {
-		background-color: #333;
-		border: 1px solid #444;
-		color: white;
-	}
+    .forum-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #333;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        color: #1db954;
+        font-size: 18px;
+    }
 
-		.form-select:focus, .form-control:focus {
-			background-color: #444;
-			border-color: #1db954;
-			color: white;
-			box-shadow: 0 0 0 0.25rem rgba(29, 185, 84, 0.25);
-		}
+    .forum-details {
+        flex-grow: 1;
+        min-width: 0;
+    }
 
-	/* Modal Styling */
-	.modal-backdrop {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		z-index: 1000;
-	}
+    .forum-details h4 {
+        margin: 0 0 5px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+    }
 
-	.modal {
-		z-index: 1100;
-	}
+    .forum-details p {
+        color: #b3b3b3;
+        margin: 0 0 10px;
+        font-size: 14px;
+    }
 
-	.modal-content {
-		background-color: #282828;
-		color: white;
-	}
+    .forum-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        font-size: 12px;
+        color: #888;
+    }
 
-	.modal-header, .modal-footer {
-		border-color: #333;
-	}
+    .forum-activity {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-left: 15px;
+    }
 
-	.btn-close {
-		filter: invert(1) grayscale(100%) brightness(200%);
-	}
+    .activity-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #444;
+    }
 
-	/* Icon Selector */
-	.icon-selector {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10px;
-	}
+    .activity-indicator.active {
+        background-color: #1db954;
+    }
 
-	.icon-option {
-		width: 40px;
-		height: 40px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: #333;
-		border-radius: 4px;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
+    /* Form Styling */
+    .form-select, .form-control {
+        background-color: #333;
+        border: 1px solid #444;
+        color: white;
+    }
 
-		.icon-option:hover {
-			background-color: #444;
-		}
+    .form-select:focus, .form-control:focus {
+        background-color: #444;
+        border-color: #1db954;
+        color: white;
+        box-shadow: 0 0 0 0.25rem rgba(29, 185, 84, 0.25);
+    }
 
-		.icon-option.selected {
-			background-color: #1db954;
-		}
+    /* Button Styling */
+    .btn-primary {
+        background-color: #1db954;
+        border-color: #1db954;
+    }
 
-	/* Loading Spinner */
-	.loading-spinner {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		height: 200px;
-		color: #b3b3b3;
-	}
+    .btn-primary:hover {
+        background-color: #1ed760;
+        border-color: #1ed760;
+    }
 
-	/* Alert Styling */
-	.alert-danger {
-		background-color: rgba(220, 53, 69, 0.2);
-		color: #f8d7da;
-		border: 1px solid rgba(220, 53, 69, 0.3);
-		border-radius: 8px;
-		padding: 20px;
-		text-align: center;
-	}
+    .btn-outline-light:hover {
+        background-color: #f8f9fa;
+        color: #212529;
+    }
 
-	/* Button Styling */
-	.btn-primary {
-		background-color: #1db954;
-		border-color: #1db954;
-	}
+    /* Modal Styling */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
 
-		.btn-primary:hover {
-			background-color: #1ed760;
-			border-color: #1ed760;
-		}
+    .modal {
+        z-index: 1100;
+    }
 
-	.btn-outline-light:hover {
-		background-color: #f8f9fa;
-		color: #212529;
-	}
+    .modal-content {
+        background-color: #282828;
+        color: white;
+    }
+
+    .modal-header, .modal-footer {
+        border-color: #333;
+    }
+
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* Icon Selector */
+    .icon-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .icon-option {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #333;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .icon-option:hover {
+        background-color: #444;
+    }
+
+    .icon-option.selected {
+        background-color: #1db954;
+    }
+
+    /* Alert Styling */
+    .alert-danger {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #f8d7da;
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .sidebar {
+            width: 60px;
+            overflow: hidden;
+        }
+
+        .sidebar-item span,
+        .user-profile span {
+            display: none;
+        }
+
+        .sidebar-item {
+            justify-content: center;
+            padding: 15px 0;
+        }
+
+        .sidebar-item i {
+            margin-right: 0;
+        }
+
+        .sidebar-logo {
+            display: none;
+        }
+
+        .sidebar-footer {
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .user-profile img {
+            margin-right: 0;
+        }
+
+        .main-content {
+            margin-left: 60px;
+        }
+
+        .user-profile-mini {
+            display: block;
+        }
+
+        .top-bar {
+            margin-bottom: 20px;
+        }
+    }
 </style>
 
 @code {
-	// Code section remains the same
-	// Data
-	private List<ForumTopicDto> forumTopics = new List<ForumTopicDto>();
-	private List<SubForumDto> subForums = new List<SubForumDto>();
+    // Code section remains the same
+    // Data
+    private List<ForumTopicDto> forumTopics = new List<ForumTopicDto>();
+    private List<SubForumDto> subForums = new List<SubForumDto>();
 
-	// UI state
-	private bool isLoading = true;
-	private bool hasError = false;
-	private string errorMessage = "";
-	private bool showCreateTopicModal = false;
-	private bool isSubmitting = false;
-	private int selectedSubForumId = 0;
-	private string currentUserId;
-	private string userDisplayName;
+    // UI state
+    private bool isLoading = true;
+    private bool hasError = false;
+    private string errorMessage = "";
+    private bool showCreateTopicModal = false;
+    private bool isSubmitting = false;
+    private int selectedSubForumId = 0;
+    private string currentUserId;
+    private string userDisplayName;
 
-	// Form state
-	private CreateTopicDto newTopic = new CreateTopicDto();
-	private string titleError;
-	private string contentError;
+    // Form state
+    private CreateTopicDto newTopic = new CreateTopicDto();
+    private string titleError;
+    private string contentError;
 
-	// Computed properties
-	private List<ForumTopicDto> filteredTopics => selectedSubForumId == 0
-		? forumTopics
-		: forumTopics.Where(t => t.SubForumId == selectedSubForumId).ToList();
+    // Computed properties
+    private List<ForumTopicDto> filteredTopics => selectedSubForumId == 0
+        ? forumTopics
+        : forumTopics.Where(t => t.SubForumId == selectedSubForumId).ToList();
 
-	// Icon options
-	private List<string> availableIcons = new List<string>
-	{
-		"fas fa-comments",
-		"fas fa-record-vinyl",
-		"fas fa-microphone",
-		"fas fa-guitar",
-		"fas fa-compact-disc",
-		"fas fa-headphones",
-		"fas fa-music",
-		"fas fa-drum",
-		"fas fa-star",
-		"fas fa-sliders-h"
-	};
+    // Icon options
+    private List<string> availableIcons = new List<string>
+    {
+        "fas fa-comments",
+        "fas fa-record-vinyl",
+        "fas fa-microphone",
+        "fas fa-guitar",
+        "fas fa-compact-disc",
+        "fas fa-headphones",
+        "fas fa-music",
+        "fas fa-drum",
+        "fas fa-star",
+        "fas fa-sliders-h"
+    };
 
-	protected override async Task OnInitializedAsync()
-	{
-		await LoadData();
-	}
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
 
-	private async Task LoadData()
-	{
-		try
-		{
-			isLoading = true;
-			hasError = false;
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            hasError = false;
 
-			// Log that we're loading data
-			await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading data...");
+            // Log that we're loading data
+            await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading data...");
 
-			// Try to get user info
-			var userProfile = await AuthService.GetUserProfile();
-			if (userProfile != null)
-			{
-				currentUserId = userProfile.Id;
-				userDisplayName = userProfile.DisplayName;
-				await JSRuntime.InvokeVoidAsync("console.log", $"Forum: User authenticated as {userDisplayName}");
-			}
-			else
-			{
-				await JSRuntime.InvokeVoidAsync("console.log", "Forum: No user profile available");
-			}
+            // Try to get user info
+            var userProfile = await AuthService.GetUserProfile();
+            if (userProfile != null)
+            {
+                currentUserId = userProfile.Id;
+                userDisplayName = userProfile.DisplayName;
+                await JSRuntime.InvokeVoidAsync("console.log", $"Forum: User authenticated as {userDisplayName}");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", "Forum: No user profile available");
+            }
 
-			// Load subforums
-			await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading subforums...");
-			subForums = await ForumService.GetSubForumsAsync();
-			await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {subForums.Count} subforums");
+            // Load subforums
+            await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading subforums...");
+            subForums = await ForumService.GetSubForumsAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {subForums.Count} subforums");
 
-			// Load topics
-			await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading topics...");
-			forumTopics = await ForumService.GetTopicsAsync();
-			await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {forumTopics.Count} topics");
+            // Load topics
+            await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading topics...");
+            forumTopics = await ForumService.GetTopicsAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {forumTopics.Count} topics");
 
-			// Initialize new topic with default values
-			if (subForums.Any() && newTopic.SubForumId == 0)
-			{
-				newTopic.SubForumId = subForums.First().Id;
-			}
-			newTopic.Icon = "fas fa-comments";
-		}
-		catch (Exception ex)
-		{
-			await JSRuntime.InvokeVoidAsync("console.error", "Error loading forum data:", ex);
+            // Initialize new topic with default values
+            if (subForums.Any() && newTopic.SubForumId == 0)
+            {
+                newTopic.SubForumId = subForums.First().Id;
+            }
+            newTopic.Icon = "fas fa-comments";
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading forum data:", ex);
 
-			// Set error state
-			hasError = true;
-			errorMessage = $"Failed to load forum data: {ex.Message}";
+            // Set error state
+            hasError = true;
+            errorMessage = $"Failed to load forum data: {ex.Message}";
 
-			// Initialize empty collections to avoid null reference errors
-			subForums = new List<SubForumDto>();
-			forumTopics = new List<ForumTopicDto>();
-		}
-		finally
-		{
-			isLoading = false;
-			StateHasChanged();
-		}
-	}
+            // Initialize empty collections to avoid null reference errors
+            subForums = new List<SubForumDto>();
+            forumTopics = new List<ForumTopicDto>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
 
-	private async Task RetryLoading()
-	{
-		await LoadData();
-	}
+    private async Task RetryLoading()
+    {
+        await LoadData();
+    }
 
-	private void NavigateToTopic(int topicId)
-	{
-		NavigationManager.NavigateTo($"/forum/topic/{topicId}");
-	}
+    private void NavigateToTopic(int topicId)
+    {
+        NavigationManager.NavigateTo($"/forum/topic/{topicId}");
+    }
 
-	private void ShowCreateTopicModal()
-	{
-		// Reset form
-		newTopic = new CreateTopicDto
-			{
-				SubForumId = subForums.Any() ? subForums.First().Id : 0,
-				Icon = "fas fa-comments"
-			};
-		titleError = null;
-		contentError = null;
-		showCreateTopicModal = true;
-	}
+    private void ShowCreateTopicModal()
+    {
+        // Reset form
+        newTopic = new CreateTopicDto
+            {
+                SubForumId = subForums.Any() ? subForums.First().Id : 0,
+                Icon = "fas fa-comments"
+            };
+        titleError = null;
+        contentError = null;
+        showCreateTopicModal = true;
+    }
 
-	private void CloseCreateTopicModal()
-	{
-		showCreateTopicModal = false;
-	}
+    private void CloseCreateTopicModal()
+    {
+        showCreateTopicModal = false;
+    }
 
-	private void SelectIcon(string icon)
-	{
-		newTopic.Icon = icon;
-	}
+    private void SelectIcon(string icon)
+    {
+        newTopic.Icon = icon;
+    }
 
-	private async Task CreateTopic()
-	{
-		// Validate form
-		bool isValid = true;
+    private async Task CreateTopic()
+    {
+        // Validate form
+        bool isValid = true;
 
-		if (string.IsNullOrWhiteSpace(newTopic.Title))
-		{
-			titleError = "Title is required";
-			isValid = false;
-		}
-		else if (newTopic.Title.Length < 3)
-		{
-			titleError = "Title must be at least 3 characters";
-			isValid = false;
-		}
-		else
-		{
-			titleError = null;
-		}
+        if (string.IsNullOrWhiteSpace(newTopic.Title))
+        {
+            titleError = "Title is required";
+            isValid = false;
+        }
+        else if (newTopic.Title.Length < 3)
+        {
+            titleError = "Title must be at least 3 characters";
+            isValid = false;
+        }
+        else
+        {
+            titleError = null;
+        }
 
-		if (string.IsNullOrWhiteSpace(newTopic.Content))
-		{
-			contentError = "Content is required";
-			isValid = false;
-		}
-		else if (newTopic.Content.Length < 10)
-		{
-			contentError = "Content must be at least 10 characters";
-			isValid = false;
-		}
-		else
-		{
-			contentError = null;
-		}
+        if (string.IsNullOrWhiteSpace(newTopic.Content))
+        {
+            contentError = "Content is required";
+            isValid = false;
+        }
+        else if (newTopic.Content.Length < 10)
+        {
+            contentError = "Content must be at least 10 characters";
+            isValid = false;
+        }
+        else
+        {
+            contentError = null;
+        }
 
-		if (!isValid) return;
+        if (!isValid) return;
 
-		// Submit form
-		isSubmitting = true;
+        // Submit form
+        isSubmitting = true;
 
-		try
-		{
-			await JSRuntime.InvokeVoidAsync("console.log", "Forum: Creating new topic...");
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "Forum: Creating new topic...");
 
-			// First check if we already have userId from initial load
-			if (string.IsNullOrEmpty(currentUserId))
-			{
-				// Attempt to get user profile again
-				var userProfile = await AuthService.GetUserProfile();
-				if (userProfile == null || string.IsNullOrEmpty(userProfile.Id))
-				{
-					throw new Exception("You must be logged in to create a topic");
-				}
-				currentUserId = userProfile.Id;
-				await JSRuntime.InvokeVoidAsync("console.log", $"Retrieved user ID: {currentUserId}");
-			}
+            // First check if we already have userId from initial load
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                // Attempt to get user profile again
+                var userProfile = await AuthService.GetUserProfile();
+                if (userProfile == null || string.IsNullOrEmpty(userProfile.Id))
+                {
+                    throw new Exception("You must be logged in to create a topic");
+                }
+                currentUserId = userProfile.Id;
+                await JSRuntime.InvokeVoidAsync("console.log", $"Retrieved user ID: {currentUserId}");
+            }
 
-			// Explicitly set the UserId in the new topic
-			newTopic.UserId = currentUserId;
+            // Debug logging
+            await JSRuntime.InvokeVoidAsync("console.log", "Creating topic...");
 
-			// Debug logging
-			await JSRuntime.InvokeVoidAsync("console.log", $"Creating topic with UserId: {newTopic.UserId}");
+            var createdTopic = await ForumService.CreateTopicAsync(newTopic);
 
-			// Verify payload before sending
-			if (string.IsNullOrEmpty(newTopic.UserId))
-			{
-				throw new Exception("Unable to determine user ID. Please try logging in again.");
-			}
+            if (createdTopic != null)
+            {
+                forumTopics.Insert(0, createdTopic);
+                CloseCreateTopicModal();
 
-			var createdTopic = await ForumService.CreateTopicAsync(newTopic);
+                await JSRuntime.InvokeVoidAsync("alert", "Topic created successfully!");
+                await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Topic created with ID: {createdTopic.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            string errorMsg = ex.Message;
 
-			if (createdTopic != null)
-			{
-				// Add to the list and close modal
-				forumTopics.Insert(0, createdTopic);
-				CloseCreateTopicModal();
+            if (errorMsg.Contains("{") && errorMsg.Contains("}"))
+            {
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("console.error", "Full error:", errorMsg);
 
-				// Show success message
-				await JSRuntime.InvokeVoidAsync("alert", "Topic created successfully!");
-				await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Topic created with ID: {createdTopic.Id}");
-			}
-		}
-		catch (Exception ex)
-		{
-			// Extract meaningful error message from the exception
-			string errorMsg = ex.Message;
+                    if (errorMsg.Contains("\"title\":"))
+                    {
+                        int startIndex = errorMsg.IndexOf("\"title\":") + 9;
+                        int endIndex = errorMsg.IndexOf(",", startIndex);
+                        if (endIndex > startIndex)
+                        {
+                            string title = errorMsg.Substring(startIndex, endIndex - startIndex).Trim('"');
+                            errorMsg = title;
+                        }
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, keep original message
+                }
+            }
 
-			// Try to parse the error if it contains JSON
-			if (errorMsg.Contains("{") && errorMsg.Contains("}"))
-			{
-				try
-				{
-					// Log the full error for debugging
-					await JSRuntime.InvokeVoidAsync("console.error", "Full error:", errorMsg);
+            await JSRuntime.InvokeVoidAsync("console.error", "Error creating topic: " + errorMsg);
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to create topic: " + errorMsg);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
 
-					// Extract just the user-friendly part if possible
-					if (errorMsg.Contains("\"title\":"))
-					{
-						int startIndex = errorMsg.IndexOf("\"title\":") + 9;
-						int endIndex = errorMsg.IndexOf(",", startIndex);
-						if (endIndex > startIndex)
-						{
-							string title = errorMsg.Substring(startIndex, endIndex - startIndex).Trim('"');
-							errorMsg = title;
-						}
-					}
-				}
-				catch
-				{
-					// If parsing fails, keep original message
-				}
-			}
+    private string GetContentSummary(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return string.Empty;
 
-			await JSRuntime.InvokeVoidAsync("console.error", "Error creating topic: " + errorMsg);
-			await JSRuntime.InvokeVoidAsync("alert", "Failed to create topic: " + errorMsg);
-		}
-		finally
-		{
-			isSubmitting = false;
-			StateHasChanged();
-		}
-	}
+        // Create a summary (first 150 chars)
+        return content.Length > 150
+            ? content.Substring(0, 147) + "..."
+            : content;
+    }
 
+    private string FormatTimeAgo(DateTime date)
+    {
+        var timeSpan = DateTime.Now - date;
 
+        if (timeSpan.TotalMinutes < 1)
+            return "just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays} days ago";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)(timeSpan.TotalDays / 7)} weeks ago";
+        if (timeSpan.TotalDays < 365)
+            return $"{(int)(timeSpan.TotalDays / 30)} months ago";
 
+        return $"{(int)(timeSpan.TotalDays / 365)} years ago";
+    }
 
-	private string GetContentSummary(string content)
-	{
-		if (string.IsNullOrEmpty(content)) return string.Empty;
+    private bool IsActiveDiscussion(ForumTopicDto topic)
+    {
+        // Topic is considered active if it's less than 3 days old or has recent comments
+        return (DateTime.Now - topic.CreatedAt).TotalDays < 3 || topic.CommentCount > 0;
+    }
 
-		// Create a summary (first 150 chars)
-		return content.Length > 150
-			? content.Substring(0, 147) + "..."
-			: content;
-	}
-
-	private string FormatTimeAgo(DateTime date)
-	{
-		var timeSpan = DateTime.Now - date;
-
-		if (timeSpan.TotalMinutes < 1)
-			return "just now";
-		if (timeSpan.TotalMinutes < 60)
-			return $"{(int)timeSpan.TotalMinutes} minutes ago";
-		if (timeSpan.TotalHours < 24)
-			return $"{(int)timeSpan.TotalHours} hours ago";
-		if (timeSpan.TotalDays < 7)
-			return $"{(int)timeSpan.TotalDays} days ago";
-		if (timeSpan.TotalDays < 30)
-			return $"{(int)(timeSpan.TotalDays / 7)} weeks ago";
-		if (timeSpan.TotalDays < 365)
-			return $"{(int)(timeSpan.TotalDays / 30)} months ago";
-
-		return $"{(int)(timeSpan.TotalDays / 365)} years ago";
-	}
-
-	private bool IsActiveDiscussion(ForumTopicDto topic)
-	{
-		// Topic is considered active if it's less than 3 days old or has recent comments
-		return (DateTime.Now - topic.CreatedAt).TotalDays < 3 || topic.CommentCount > 0;
-	}
-
-	private void GoToDashboard()
-	{
-		NavigationManager.NavigateTo("/dashboard");
-	}
+    private void GoToDashboard()
+    {
+        NavigationManager.NavigateTo("/dashboard");
+    }
 }

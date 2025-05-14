@@ -42,7 +42,7 @@ namespace FM.Application
             if (isApiContext)
             {
                 services.AddHttpContextAccessor();
-                services.AddScoped<IUserService, ApiUserService>();
+                services.AddScoped<IUserService, ServerUserService>();
             }
             else
             {

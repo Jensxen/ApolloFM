@@ -44,7 +44,7 @@ namespace FM.Application.Services.ServiceDTO
         public string Content { get; set; }
         public int SubForumId { get; set; }
         public string Icon { get; set; }
-        public string UserId { get; set; }
+        public string SpotifyPlaylistId { get; set; }
     }
 
     public class AddCommentDto

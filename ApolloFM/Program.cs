@@ -1,14 +1,16 @@
 using ApolloFM;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Components.Authorization;
-using FM.Infrastructure;
-using FM.Application;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using ApolloFM.JsInterop;
+using FM.Application;
+using FM.Application.Interfaces.IRepositories;
 using FM.Application.Services.AuthServices;
 using FM.Application.Services.ForumServices;
+using FM.Infrastructure;
+using FM.Infrastructure.Repositories.WebAssembly;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.JSInterop;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -44,6 +46,9 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<SpotifyAuthenticationStateProvider>());
 
 builder.Services.AddScoped<TokenService>();
+
+// Add a WebAssembly-specific implementation of IUserRepository
+builder.Services.AddScoped<IUserRepository, WebUserRepository>();
 
 builder.Services.AddApplicationServices(isApiContext: false, registerAuthenticationProvider: false);
 

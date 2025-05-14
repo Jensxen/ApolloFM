@@ -18,6 +18,8 @@ namespace FM.Infrastructure.Database
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             // Configure UserRole relationship
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Role)
@@ -36,7 +38,7 @@ namespace FM.Infrastructure.Database
                 .HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
-                .OnDelete(DeleteBehavior.Cascade); // Enable cascade delete
+                .OnDelete(DeleteBehavior.Cascade); // Enable cascade delete 
 
             // Configure UserRole-Permission relationship
             modelBuilder.Entity<UserRole>()
@@ -75,7 +77,17 @@ namespace FM.Infrastructure.Database
                 .IsRowVersion()
                 .ValueGeneratedOnAddOrUpdate();
 
-            base.OnModelCreating(modelBuilder);
+            // Make sure Post is configured with all properties
+            modelBuilder.Entity<Post>(entity => 
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Icon).HasDefaultValue(string.Empty);
+                entity.Property(e => e.PostTypeId).HasDefaultValue(1); // Default as Topic
+                entity.HasOne(e => e.ParentPost)
+                    .WithMany()
+                    .HasForeignKey(e => e.ParentPostId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
         }
     }
 }

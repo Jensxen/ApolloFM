@@ -1,5 +1,4 @@
-﻿// FM.Infrastructure/Repositories/UserRepository.cs
-using FM.Application.Interfaces.IRepositories;
+﻿using FM.Application.Interfaces.IRepositories;
 using FM.Domain.Entities;
 using FM.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +40,7 @@ namespace FM.Infrastructure.Repositories
         {
             _context.Users.Update(user);
         }
+
         public async Task DeleteUserAsync(string id, byte[] rowVersion)
         {
             // Option 1: If User has soft delete functionality
@@ -53,6 +53,11 @@ namespace FM.Infrastructure.Repositories
                 throw new DbUpdateConcurrencyException("The user has been modified by someone else.");
 
             _context.Users.Remove(user);
+        }
+
+        public async Task<User?> GetFirstUserAsync()
+        {
+            return await _context.Users.FirstOrDefaultAsync();
         }
     }
 }

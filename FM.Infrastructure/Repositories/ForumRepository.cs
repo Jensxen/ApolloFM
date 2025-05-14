@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FM.Application.Interfaces.IRepositories;
-using FM.Application.Interfaces.IRepositories;
+using FM.Domain.Entities.Enums;
 using FM.Application.Services.ServiceDTO;
 using FM.Domain.Entities;
 using FM.Infrastructure.Database;
@@ -23,38 +23,107 @@ namespace FM.Infrastructure.Repositories.ForumRepositories
 
         public async Task<List<ForumTopicDto>> GetAllTopicsAsync()
         {
-            var posts = await _context.Posts
-                .Include(p => p.User)
-                .Include(p => p.SubForum)
-                .Include(p => p.Comments)
-                .ThenInclude(c => c.User)
-                .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
-
-            return posts.Select(p => new ForumTopicDto
+            try
             {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                AuthorId = p.UserId,
-                AuthorName = p.User?.DisplayName ?? "Anonymous",
-                AuthorProfileImage = null, // Add profile image logic if available
-                CreatedAt = p.CreatedAt,
-                LastUpdatedAt = p.CreatedAt, // Assuming no update tracking
-                CommentCount = p.Comments?.Count ?? 0,
-                SubForumId = p.SubForumId,
-                SubForumName = p.SubForum?.Name ?? "General",
-                Icon = DetermineIconForPost(p),
-                Comments = null // Don't include comments in the list view
-            }).ToList();
+                // First, get just the IDs of topic posts to avoid null references
+                var topicIds = await _context.Posts
+                    .Where(p => p.PostTypeId == (int)PostTypeEnum.Topic)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var topics = new List<ForumTopicDto>();
+
+                // Process each topic individually to isolate errors
+                foreach (var topicId in topicIds)
+                {
+                    try
+                    {
+                        // Get the basic post data first
+                        var post = await _context.Posts.FindAsync(topicId);
+                        if (post == null) continue;
+
+                        // Get related data separately, with null checks
+                        var user = post.UserId != null ? await _context.Users.FindAsync(post.UserId) : null;
+                        var subForum = post.SubForumId != 0 ? await _context.SubForums.FindAsync(post.SubForumId) : null;
+
+                        // Create topic DTO with safe null handling
+                        var topic = new ForumTopicDto
+                        {
+                            Id = post.Id,
+                            Title = post.Title ?? string.Empty,
+                            Content = post.Content ?? string.Empty,
+                            AuthorId = user?.Id ?? string.Empty,
+                            AuthorName = user?.DisplayName ?? "Unknown User",
+                            CreatedAt = post.CreatedAt,
+                            LastUpdatedAt = post.UpdatedAt ?? post.CreatedAt,
+                            SubForumId = post.SubForumId,
+                            SubForumName = subForum?.Name ?? "General",
+                            Icon = post.Icon ?? "fas fa-comments",
+                            Comments = new List<CommentDto>()
+                        };
+
+                        // Get comment count
+                        topic.CommentCount = await _context.Comments.CountAsync(c => c.PostId == topicId);
+
+                        // Try to get comments
+                        var commentIds = await _context.Comments
+                            .Where(c => c.PostId == topicId)
+                            .Select(c => c.Id)
+                            .ToListAsync();
+
+                        foreach (var commentId in commentIds)
+                        {
+                            try
+                            {
+                                var comment = await _context.Comments.FindAsync(commentId);
+                                if (comment == null) continue;
+
+                                var commentUser = comment.UserId != null ?
+                                    await _context.Users.FindAsync(comment.UserId) : null;
+
+                                topic.Comments.Add(new CommentDto
+                                {
+                                    Id = comment.Id,
+                                    Content = comment.Content ?? string.Empty,
+                                    AuthorId = commentUser?.Id ?? string.Empty,
+                                    AuthorName = commentUser?.DisplayName ?? "Anonymous",
+                                    AuthorProfileImage = string.Empty,
+                                    CreatedAt = comment.CreatedAt
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log but continue with other comments
+                                Console.WriteLine($"Error processing comment {commentId}: {ex.Message}");
+                            }
+                        }
+
+                        topics.Add(topic);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but continue with other topics
+                        Console.WriteLine($"Error processing topic {topicId}: {ex.Message}");
+                    }
+                }
+
+                return topics.OrderByDescending(t => t.CreatedAt).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetAllTopicsAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public async Task<ForumTopicDto> GetTopicByIdAsync(int id)
         {
+            // Get the post with includes
             var post = await _context.Posts
                 .Include(p => p.User)
                 .Include(p => p.SubForum)
-                .Include(p => p.Comments.OrderByDescending(c => c.CreatedAt))
+                .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -63,29 +132,32 @@ namespace FM.Infrastructure.Repositories.ForumRepositories
                 return null;
             }
 
+            // Safely map to DTO
             return new ForumTopicDto
             {
                 Id = post.Id,
-                Title = post.Title,
-                Content = post.Content,
-                AuthorId = post.UserId,
+                Title = post.Title ?? string.Empty,
+                Content = post.Content ?? string.Empty,
+                AuthorId = post.User?.Id ?? string.Empty,
                 AuthorName = post.User?.DisplayName ?? "Anonymous",
-                AuthorProfileImage = null, // Add profile image logic if available
+                AuthorProfileImage = null, // No profile image yet
                 CreatedAt = post.CreatedAt,
-                LastUpdatedAt = post.CreatedAt, // Assuming no update tracking
+                LastUpdatedAt = post.UpdatedAt ?? post.CreatedAt,
                 CommentCount = post.Comments?.Count ?? 0,
                 SubForumId = post.SubForumId,
                 SubForumName = post.SubForum?.Name ?? "General",
-                Icon = DetermineIconForPost(post),
-                Comments = post.Comments?.Select(c => new CommentDto
-                {
-                    Id = c.Id,
-                    Content = c.Content,
-                    AuthorId = c.UserId,
-                    AuthorName = c.User?.DisplayName ?? "Anonymous",
-                    AuthorProfileImage = null, // Add profile image logic if available
-                    CreatedAt = c.CreatedAt
-                }).ToList()
+                Icon = post.Icon ?? DetermineIconForPost(post),
+                Comments = post.Comments?
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Select(c => new CommentDto
+                    {
+                        Id = c.Id,
+                        Content = c.Content ?? string.Empty,
+                        AuthorId = c.User?.Id ?? string.Empty,
+                        AuthorName = c.User?.DisplayName ?? "Anonymous",
+                        AuthorProfileImage = null, // No profile image yet
+                        CreatedAt = c.CreatedAt
+                    }).ToList() ?? new List<CommentDto>()
             };
         }
 
@@ -116,15 +188,24 @@ namespace FM.Infrastructure.Repositories.ForumRepositories
                 createTopicDto.SubForumId = subForum.Id;
             }
 
-            // Create post
+            // Handle null values before creating the post
+            var title = createTopicDto.Title ?? string.Empty;
+            var content = createTopicDto.Content ?? string.Empty;
+            var icon = createTopicDto.Icon ?? "fas fa-comments"; // Provide a default icon if null
+
+            // Create post with non-null values
             var post = new Post(
-                createTopicDto.Title,
-                createTopicDto.Content,
-                null, // No Spotify playlist
+                title,
+                content,
+                createTopicDto.SpotifyPlaylistId, // Can be null
                 userId,
                 createTopicDto.SubForumId
             );
 
+            // Explicitly set the icon
+            post.UpdateIcon(icon);
+
+            // Add to database
             _context.Posts.Add(post);
             await _context.SaveChangesAsync();
 
@@ -147,7 +228,7 @@ namespace FM.Infrastructure.Repositories.ForumRepositories
                 CommentCount = 0,
                 SubForumId = createdPost.SubForumId,
                 SubForumName = createdPost.SubForum?.Name ?? "General",
-                Icon = createTopicDto.Icon ?? "fas fa-comments",
+                Icon = createdPost.Icon ?? "fas fa-comments", // Use the post icon or default
                 Comments = new List<CommentDto>()
             };
         }

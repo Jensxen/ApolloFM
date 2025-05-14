@@ -11,6 +11,6 @@ namespace FM.Application.Interfaces.IRepositories
         Task UpdateUserAsync(User user);
         Task DeleteUserAsync(string id, byte[] rowVersion);
         Task<IEnumerable<User>> GetAllAsync(int limit = 100);
-
+        Task<User> GetFirstUserAsync();
     }
 }

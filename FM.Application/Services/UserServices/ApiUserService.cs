@@ -1,54 +1,73 @@
-﻿// FM.Application/Services/ServiceDTO/UserDTO/HttpUserContext.cs
-using FM.Application.Services.UserServices;
-using Microsoft.AspNetCore.Http;
+﻿// Update your ApiUserService to handle Blazor WebAssembly authentication
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
-namespace FM.Application.Services.ServiceDTO.UserDTO
+namespace FM.Application.Services.UserServices
 {
-    /// <summary>
-    /// Implementation of IUserContext that uses HttpContext for server-side API scenarios
-    /// </summary>
     public class ApiUserService : IUserService
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly AuthenticationStateProvider _authStateProvider;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<ApiUserService> _logger;
 
-        public ApiUserService(IHttpContextAccessor httpContextAccessor)
+        public ApiUserService(
+            AuthenticationStateProvider authStateProvider,
+            IHttpClientFactory httpClientFactory,
+            ILogger<ApiUserService> logger)
         {
-            _httpContextAccessor = httpContextAccessor;
+            _authStateProvider = authStateProvider;
+            _httpClientFactory = httpClientFactory;
+            _logger = logger;
+        }
+
+        public async Task<string> GetCurrentUserIdAsync()
+        {
+            try
+            {
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (user.Identity?.IsAuthenticated != true)
+                {
+                    _logger.LogWarning("User is not authenticated");
+                    return null;
+                }
+
+                // Try different claim types to find user ID
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (string.IsNullOrEmpty(userId))
+                    userId = user.FindFirst("sub")?.Value;
+                
+                if (string.IsNullOrEmpty(userId))
+                    userId = user.FindFirst("spotify_id")?.Value;
+                
+                if (string.IsNullOrEmpty(userId))
+                    userId = user.Identity.Name;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("No user ID found in claims. Available claims: {Claims}", 
+                        string.Join(", ", user.Claims.Select(c => $"{c.Type}: {c.Value}")));
+                }
+                else
+                {
+                    _logger.LogInformation("Found user ID: {UserId}", userId);
+                }
+
+                return userId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user ID");
+                return null;
+            }
         }
 
         public string GetCurrentUserId()
         {
-            var user = _httpContextAccessor.HttpContext?.User;
-            if (user == null || !user.Identity?.IsAuthenticated != true)
-            {
-                return null;
-            }
-
-            // Try multiple claim types to find a user identifier
-            var userId = user.Identity?.Name;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                // Use Claims.FirstOrDefault instead of FindFirstValue
-                var claim = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-                userId = claim?.Value;
-            }
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                // Use Claims.FirstOrDefault instead of FindFirstValue
-                var claim = user.Claims.FirstOrDefault(c => c.Type == "spotify_id");
-                userId = claim?.Value;
-            }
-
-            return userId;
-        }
-
-        public Task<string> GetCurrentUserIdAsync()
-        {
-            return Task.FromResult(GetCurrentUserId());
+            return GetCurrentUserIdAsync().GetAwaiter().GetResult();
         }
     }
 }
