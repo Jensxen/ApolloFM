@@ -702,10 +702,34 @@
 
 		try
 		{
-			// Only log simple string messages, not objects
 			await JSRuntime.InvokeVoidAsync("console.log", "Forum: Creating new topic...");
 
-			var createdTopic = await ForumService.CreateTopicAsync(newTopic, currentUserId ?? "anonymous");
+			// First check if we already have userId from initial load
+			if (string.IsNullOrEmpty(currentUserId))
+			{
+				// Attempt to get user profile again
+				var userProfile = await AuthService.GetUserProfile();
+				if (userProfile == null || string.IsNullOrEmpty(userProfile.Id))
+				{
+					throw new Exception("You must be logged in to create a topic");
+				}
+				currentUserId = userProfile.Id;
+				await JSRuntime.InvokeVoidAsync("console.log", $"Retrieved user ID: {currentUserId}");
+			}
+
+			// Explicitly set the UserId in the new topic
+			newTopic.UserId = currentUserId;
+
+			// Debug logging
+			await JSRuntime.InvokeVoidAsync("console.log", $"Creating topic with UserId: {newTopic.UserId}");
+
+			// Verify payload before sending
+			if (string.IsNullOrEmpty(newTopic.UserId))
+			{
+				throw new Exception("Unable to determine user ID. Please try logging in again.");
+			}
+
+			var createdTopic = await ForumService.CreateTopicAsync(newTopic);
 
 			if (createdTopic != null)
 			{
@@ -720,9 +744,37 @@
 		}
 		catch (Exception ex)
 		{
-			// Only log the message, not the entire exception object
-			await JSRuntime.InvokeVoidAsync("console.error", "Error creating topic: " + ex.Message);
-			await JSRuntime.InvokeVoidAsync("alert", "Failed to create topic: " + ex.Message);
+			// Extract meaningful error message from the exception
+			string errorMsg = ex.Message;
+
+			// Try to parse the error if it contains JSON
+			if (errorMsg.Contains("{") && errorMsg.Contains("}"))
+			{
+				try
+				{
+					// Log the full error for debugging
+					await JSRuntime.InvokeVoidAsync("console.error", "Full error:", errorMsg);
+
+					// Extract just the user-friendly part if possible
+					if (errorMsg.Contains("\"title\":"))
+					{
+						int startIndex = errorMsg.IndexOf("\"title\":") + 9;
+						int endIndex = errorMsg.IndexOf(",", startIndex);
+						if (endIndex > startIndex)
+						{
+							string title = errorMsg.Substring(startIndex, endIndex - startIndex).Trim('"');
+							errorMsg = title;
+						}
+					}
+				}
+				catch
+				{
+					// If parsing fails, keep original message
+				}
+			}
+
+			await JSRuntime.InvokeVoidAsync("console.error", "Error creating topic: " + errorMsg);
+			await JSRuntime.InvokeVoidAsync("alert", "Failed to create topic: " + errorMsg);
 		}
 		finally
 		{
@@ -730,6 +782,8 @@
 			StateHasChanged();
 		}
 	}
+
+
 
 
 	private string GetContentSummary(string content)

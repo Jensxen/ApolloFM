@@ -160,6 +160,9 @@ builder.Services.AddSession(options =>
 });
 
 
+builder.Services.AddHttpContextAccessor();
+
+
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddApplicationServices(isApiContext: true);

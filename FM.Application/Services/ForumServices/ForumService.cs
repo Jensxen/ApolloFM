@@ -4,16 +4,19 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FM.Application.Interfaces.IRepositories;
 using FM.Application.Services.ServiceDTO;
+using FM.Application.Services.UserServices;
 
 namespace FM.Application.Services.ForumServices
 {
     public class ForumService : IForumService
     {
         private readonly IForumRepository _forumRepository;
+        private readonly IUserService _userContext;
 
-        public ForumService(IForumRepository forumRepository)
+        public ForumService(IForumRepository forumRepository, IUserService userContext)
         {
             _forumRepository = forumRepository;
+            _userContext = userContext;
         }
 
         public async Task<List<ForumTopicDto>> GetTopicsAsync()
@@ -31,7 +34,7 @@ namespace FM.Application.Services.ForumServices
             return await _forumRepository.GetAllSubForumsAsync();
         }
 
-        public async Task<ForumTopicDto> CreateTopicAsync(CreateTopicDto createTopicDto, string userId)
+        public async Task<ForumTopicDto> CreateTopicAsync(CreateTopicDto createTopicDto)
         {
             if (string.IsNullOrEmpty(createTopicDto.Title))
                 throw new ArgumentException("Topic title cannot be empty");
@@ -39,8 +42,15 @@ namespace FM.Application.Services.ForumServices
             if (string.IsNullOrEmpty(createTopicDto.Content))
                 throw new ArgumentException("Topic content cannot be empty");
 
+            // Get userId from authentication context
+            var userId = await _userContext.GetCurrentUserIdAsync();
+
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("User must be authenticated to create a topic");
+
             return await _forumRepository.CreateTopicAsync(createTopicDto, userId);
         }
+
 
         public async Task<CommentDto> AddCommentAsync(AddCommentDto addCommentDto, string userId)
         {

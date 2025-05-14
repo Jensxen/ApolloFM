@@ -7,7 +7,8 @@ namespace FM.Application.Services.ForumServices
         Task<List<ForumTopicDto>> GetTopicsAsync();
         Task<ForumTopicDto> GetTopicByIdAsync(int id);
         Task<List<SubForumDto>> GetSubForumsAsync();
-        Task<ForumTopicDto> CreateTopicAsync(CreateTopicDto createTopicDto, string userId);
+        Task<ForumTopicDto> CreateTopicAsync(CreateTopicDto createTopicDto);
         Task<CommentDto> AddCommentAsync(AddCommentDto addCommentDto, string userId);
     }
+
 }

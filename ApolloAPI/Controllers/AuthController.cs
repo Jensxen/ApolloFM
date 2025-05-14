@@ -313,7 +313,7 @@ public class AuthController : ControllerBase
 
     // In your AuthController or a UserController
     [HttpPost("register")]
-    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserRequest request)
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserRequestDTO request)
     {
         if (string.IsNullOrEmpty(request.SpotifyUserId) || string.IsNullOrEmpty(request.DisplayName))
         {

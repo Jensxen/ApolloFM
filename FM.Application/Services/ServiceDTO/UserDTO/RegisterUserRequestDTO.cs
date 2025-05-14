@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace FM.Application.Services.ServiceDTO.UserDTO
 {
     // ApolloAPI/Models/RegisterUserRequest.cs
-    public class RegisterUserRequest
+    public class RegisterUserRequestDTO
     {
         public string SpotifyUserId { get; set; }
         public string DisplayName { get; set; }
