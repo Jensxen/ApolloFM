@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
-using static FM.Application.Services.AuthServices.AuthService;
-using System.Net.Http.Json;
 using FM.Application.Services.ServiceDTO.SpotifyDTO;
 
 namespace FM.Application.Services.SpotifyServices
@@ -154,7 +147,8 @@ namespace FM.Application.Services.SpotifyServices
             var json = JsonDocument.Parse(content);
             var items = json.RootElement.GetProperty("items");
 
-            return items.EnumerateArray().Select(artist => {
+            return items.EnumerateArray().Select(artist =>
+            {
                 var imageUrl = artist.GetProperty("images").EnumerateArray()
                     .FirstOrDefault().TryGetProperty("url", out var url) ? url.GetString() : null;
 
@@ -192,7 +186,8 @@ namespace FM.Application.Services.SpotifyServices
             var json = JsonDocument.Parse(content);
             var items = json.RootElement.GetProperty("items");
 
-            return items.EnumerateArray().Select(item => {
+            return items.EnumerateArray().Select(item =>
+            {
                 var track = item.GetProperty("track");
                 var album = track.GetProperty("album");
                 var artists = track.GetProperty("artists");
@@ -225,10 +220,12 @@ namespace FM.Application.Services.SpotifyServices
             var json = JsonDocument.Parse(content);
             var items = json.RootElement.GetProperty("items");
 
+            int rank = 0;
             return items.EnumerateArray().Select(item =>
             {
                 var album = item.GetProperty("album");
                 var artists = item.GetProperty("artists");
+                rank++; // Increment rank for each track
 
                 return new SpotifyDataDTO
                 {
@@ -237,9 +234,9 @@ namespace FM.Application.Services.SpotifyServices
                     Album = album.GetProperty("name").GetString(),
                     AlbumImageUrl = album.GetProperty("images")[0].GetProperty("url").GetString(),
                     SongUrl = item.GetProperty("external_urls").GetProperty("spotify").GetString(),
-                    Duration = TimeSpan.FromMilliseconds(item.GetProperty("duration_ms").GetInt32())
+                    Duration = TimeSpan.FromMilliseconds(item.GetProperty("duration_ms").GetInt32()),
+                    Rank = rank
                 };
-
             }).ToList();
         }
 
@@ -323,9 +320,215 @@ namespace FM.Application.Services.SpotifyServices
                 return null;
             }
         }
+
+        public async Task<List<SpotifyPlaylistDTO>> GetUserPlaylistsAsync(string accessToken, int limit = 50, bool onlyOwned = false, int topCount = 0)
+        {
+            if (string.IsNullOrEmpty(accessToken))
+                throw new ArgumentNullException(nameof(accessToken));
+
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                // Get current user's profile to check playlist ownership later
+                var userResponse = await _httpClient.GetAsync("me");
+                userResponse.EnsureSuccessStatusCode();
+                var userContent = await userResponse.Content.ReadAsStringAsync();
+                var userJson = JsonDocument.Parse(userContent);
+                string userId = userJson.RootElement.GetProperty("id").GetString();
+
+                // Get user's playlists
+                var response = await _httpClient.GetAsync($"me/playlists?limit={limit}");
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+
+                _logger.LogInformation($"Playlists response received with length: {content.Length}");
+
+                var json = JsonDocument.Parse(content);
+
+                // Check if items property exists and is not null
+                if (!json.RootElement.TryGetProperty("items", out var itemsElement) || itemsElement.ValueKind == JsonValueKind.Null)
+                {
+                    _logger.LogWarning("No playlist items found in response or items property is null");
+                    return new List<SpotifyPlaylistDTO>();
+                }
+
+                var playlists = new List<SpotifyPlaylistDTO>();
+                var playlistTasks = new List<Task<SpotifyPlaylistDTO>>();
+
+                // Check that we have an array before trying to iterate
+                if (itemsElement.ValueKind == JsonValueKind.Array)
+                {
+                    int processedCount = 0;
+
+                    // First pass: process playlist basic info and filter if needed
+                    foreach (var item in itemsElement.EnumerateArray())
+                    {
+                        try
+                        {
+                            // Get basic playlist details
+                            string playlistId = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : "";
+                            if (string.IsNullOrEmpty(playlistId))
+                            {
+                                continue;
+                            }
+
+                            // Check ownership if filtering is requested
+                            string ownerId = "";
+                            if (item.TryGetProperty("owner", out var owner) &&
+                                owner.TryGetProperty("id", out var ownerIdProp))
+                            {
+                                ownerId = ownerIdProp.GetString();
+                            }
+
+                            bool isOwner = userId == ownerId;
+
+                            // Skip if we only want owned playlists and this isn't owned
+                            if (onlyOwned && !isOwner)
+                            {
+                                continue;
+                            }
+
+                            // For the top playlists optimization, we'll get details for all 
+                            // potentially relevant playlists and sort later
+                            playlistTasks.Add(GetPlaylistDetailsAsync(playlistId, userId, item));
+                            processedCount++;
+
+                            // If we only need topCount playlists, limit how many we process
+                            // We process a bit more than needed since some might be filtered out
+                            if (topCount > 0 && processedCount >= Math.Min(topCount * 2, limit))
+                            {
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing playlist item");
+                        }
+                    }
+
+                    // Wait for all playlist detail requests to complete
+                    await Task.WhenAll(playlistTasks);
+
+                    // Collect results
+                    foreach (var task in playlistTasks)
+                    {
+                        if (task.IsCompletedSuccessfully && task.Result != null)
+                        {
+                            playlists.Add(task.Result);
+                        }
+                    }
+
+                    // Sort by saves count
+                    playlists = playlists.OrderByDescending(p => p.SavesCount).ToList();
+
+                    // Limit to topCount if specified
+                    if (topCount > 0 && playlists.Count > topCount)
+                    {
+                        playlists = playlists.Take(topCount).ToList();
+                    }
+                }
+
+                return playlists;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching user playlists");
+                throw;
+            }
+        }
+
+        // Helper method to get details for a single playlist
+        private async Task<SpotifyPlaylistDTO> GetPlaylistDetailsAsync(string playlistId, string userId, JsonElement basicInfo)
+        {
+            try
+            {
+                // Get additional playlist details
+                var playlistResponse = await _httpClient.GetAsync($"playlists/{playlistId}");
+                if (!playlistResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning($"Failed to get details for playlist {playlistId}: {playlistResponse.StatusCode}");
+                    return null;
+                }
+
+                var playlistContent = await playlistResponse.Content.ReadAsStringAsync();
+                var playlistJson = JsonDocument.Parse(playlistContent);
+
+                // Extract values with null checks
+                int savesCount = 0;
+                if (playlistJson.RootElement.TryGetProperty("followers", out var followers) &&
+                    followers.TryGetProperty("total", out var total))
+                {
+                    savesCount = total.GetInt32();
+                }
+
+                string ownerName = "";
+                string ownerId = "";
+                bool isOwner = false;
+
+                if (playlistJson.RootElement.TryGetProperty("owner", out var owner))
+                {
+                    ownerName = owner.TryGetProperty("display_name", out var displayName) ?
+                        displayName.GetString() : "";
+
+                    ownerId = owner.TryGetProperty("id", out var ownerIdProp) ?
+                        ownerIdProp.GetString() : "";
+
+                    isOwner = userId == ownerId;
+                }
+
+                string name = basicInfo.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Untitled Playlist";
+                string description = basicInfo.TryGetProperty("description", out var descProp) ? descProp.GetString() : "";
+
+                // Handle images safely
+                string imageUrl = null;
+                if (basicInfo.TryGetProperty("images", out var images) &&
+                    images.ValueKind == JsonValueKind.Array &&
+                    images.GetArrayLength() > 0 &&
+                    images[0].TryGetProperty("url", out var url))
+                {
+                    imageUrl = url.GetString();
+                }
+
+                // Handle external URLs safely
+                string externalUrl = null;
+                if (basicInfo.TryGetProperty("external_urls", out var urls) &&
+                    urls.TryGetProperty("spotify", out var spotifyUrl))
+                {
+                    externalUrl = spotifyUrl.GetString();
+                }
+
+                // Handle tracks count safely
+                int tracksCount = 0;
+                if (basicInfo.TryGetProperty("tracks", out var tracks) &&
+                    tracks.TryGetProperty("total", out var tracksTotal))
+                {
+                    tracksCount = tracksTotal.GetInt32();
+                }
+
+                return new SpotifyPlaylistDTO
+                {
+                    Id = playlistId,
+                    Name = name,
+                    Description = description,
+                    ImageUrl = imageUrl,
+                    TracksCount = tracksCount,
+                    SavesCount = savesCount,
+                    IsOwner = isOwner,
+                    Owner = ownerName,
+                    ExternalUrl = externalUrl
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting details for playlist {playlistId}");
+                return null;
+            }
+        }
     }
 
-    // Define this class if not already defined elsewhere
+
+
     public class SpotifyArtist
     {
         public string Id { get; set; }

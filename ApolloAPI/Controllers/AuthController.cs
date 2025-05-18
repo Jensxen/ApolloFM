@@ -242,6 +242,30 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpGet("playlists")]
+    public async Task<IActionResult> GetUserPlaylists([FromQuery] int limit = 50, [FromQuery] bool onlyOwned = false, [FromQuery] int topCount = 0)
+    {
+        var accessToken = await GetValidAccessTokenAsync();
+        if (string.IsNullOrEmpty(accessToken)) return Unauthorized("Access token is missing or invalid");
+
+        try
+        {
+            var playlists = await _spotifyService.GetUserPlaylistsAsync(accessToken, limit, onlyOwned, topCount);
+            return Ok(playlists);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogError("Unauthorized: {Message}", ex.Message);
+            _tokenService.ClearAccessTokens();
+            return Unauthorized("The access token is invalid or expired");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching user playlists");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
     [HttpGet("currently-playing")]
     public async Task<IActionResult> GetCurrentlyPlayingTrack()
     {
@@ -300,7 +324,7 @@ public class AuthController : ControllerBase
     {
         {"response_type", "code"},
         {"client_id", clientId},
-        {"scope", "user-read-private user-read-email user-top-read user-read-currently-playing user-read-playback-state user-read-recently-played"},
+        {"scope", "user-read-private user-read-email user-top-read user-read-currently-playing user-read-playback-state user-read-recently-played playlist-read-private playlist-read-collaborative"},
         {"redirect_uri", redirectUri},
         {"state", state}
     };

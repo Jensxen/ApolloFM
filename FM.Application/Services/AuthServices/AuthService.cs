@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using FM.Application.Services.ServiceDTO.SpotifyDTO;
 using Microsoft.AspNetCore.Components;
-using System.Net.Http.Json;
-using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
-using FM.Application.Services.ServiceDTO.SpotifyDTO;
 
 namespace FM.Application.Services.AuthServices
 {
@@ -253,6 +254,25 @@ namespace FM.Application.Services.AuthServices
             }
         }
 
+        public async Task<List<SpotifyPlaylistDTO>> GetUserPlaylistsAsync(int limit = 50, bool onlyOwned = false, int topCount = 0)
+        {
+            try
+            {
+                // Use the existing GetApiDataAsync method which handles authentication and HTTP calls
+                return await GetApiDataAsync<List<SpotifyPlaylistDTO>>($"api/auth/playlists?limit={limit}&onlyOwned{onlyOwned}&topCount={topCount}");
+            }
+            catch (Exception ex)
+            {
+                await _jsRuntime.InvokeVoidAsync("console.error", $"Error fetching playlists: {ex.Message}");
+                return new List<SpotifyPlaylistDTO>();
+            }
+        }
+
+        public async Task<List<SpotifyPlaylistDTO>> GetTopUserPlaylistsAsync(int count = 3, bool onlyOwned = true)
+        {
+            return await GetUserPlaylistsAsync(50, onlyOwned, count);
+        }
+
         public async Task<string> GetValidAccessTokenAsync()
         {
             var token = _tokenService.GetAccessToken();
@@ -322,7 +342,5 @@ namespace FM.Application.Services.AuthServices
         {
             public DateTime PlayedAt { get; set; }
         }
-
-
     }
 }

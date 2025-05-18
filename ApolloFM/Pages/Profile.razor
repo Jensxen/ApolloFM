@@ -216,7 +216,58 @@
 					}
 				</div>
 			</div>
-
+			
+			<!-- Top Playlists -->
+			<div class="content-card">
+				<div class="card-header">
+					<h3>Most Popular Playlists By - @userDisplayName</h3>
+				</div>
+				<div class="card-body">
+					@if (loadingPlaylists)
+					{
+						<div class="text-center p-4">
+							<div class="spinner-border text-primary" role="status">
+								<span class="visually-hidden">Loading...</span>
+							</div>
+						</div>
+					}
+					else if (topPlaylists != null && topPlaylists.Any())
+					{
+						<div class="playlists-grid">
+							@foreach (var playlist in topPlaylists)
+							{
+								<div class="playlist-card">
+									<a href="@playlist.ExternalUrl" target="_blank" class="playlist-link">
+										@if (!string.IsNullOrEmpty(playlist.ImageUrl))
+										{
+											<img src="@playlist.ImageUrl" alt="@playlist.Name" class="playlist-image" />
+										}
+										else
+										{
+											<div class="playlist-image-placeholder">
+												<i class="fas fa-music"></i>
+											</div>
+										}
+										<div class="playlist-info">
+											<h4 class="playlist-name">@playlist.Name</h4>
+											<p class="playlist-tracks">@playlist.TracksCount tracks</p>
+											<div class="playlist-saves">
+												<i class="fas fa-users"></i> @playlist.SavesCount saves
+											</div>
+										</div>
+									</a>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center p-4">
+							<p class="text-muted">No playlists found or you don't own any playlists.</p>
+						</div>
+					}
+				</div>
+			</div>
 			<!-- Account Information -->
 			<div class="content-card">
 				<div class="card-header">
@@ -752,6 +803,109 @@
 			grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 		}
 	}
+
+		/* Playlists Grid - Updated for exactly three playlists */
+.playlists-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 20px;
+}
+
+.playlist-card {
+    background-color: #282828;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    height: 100%;
+}
+
+.playlist-card:hover {
+    background-color: #333;
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.playlist-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: white;
+    padding: 0;
+}
+
+.playlist-image,
+.playlist-image-placeholder {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #333;
+}
+
+.playlist-image-placeholder i {
+    font-size: 48px;
+    color: #b3b3b3;
+}
+
+.playlist-info {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.playlist-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+    height: 46px;
+}
+
+.playlist-tracks {
+    font-size: 14px;
+    color: #b3b3b3;
+    margin: 0 0 10px 0;
+}
+
+.playlist-saves {
+    margin-top: auto;
+    font-size: 15px;
+    color: #1db954;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(29, 185, 84, 0.1);
+    padding: 8px 12px;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.playlist-saves i {
+    font-size: 16px;
+}
+
+@@media (max-width: 992px) {
+    .playlists-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@@media (max-width: 768px) {
+    .playlists-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 
 @code {
@@ -776,6 +930,11 @@
 	private List<AuthService.RecentlyPlayedTrack> recentlyPlayed = new();
 	private bool loadingRecentlyPlayed = false;
 
+	//Playlist data
+	private List<SpotifyPlaylistDTO> allPlaylists = new();
+	private List<SpotifyPlaylistDTO> topPlaylists = new();
+	private bool loadingPlaylists = false;
+
 	protected override async Task OnInitializedAsync()
 	{
 		try
@@ -790,10 +949,11 @@
 				// Load user profile data
 				await LoadUserProfile();
 
-				// Load artist and track data
+				// Load artist and track data AND playlists
 				await LoadTopArtists(selectedArtistTimeRange);
 				await LoadTopTracks();
 				await LoadRecentlyPlayed();
+				await LoadUserPlaylists();
 			}
 			else
 			{
@@ -931,6 +1091,7 @@
 			await LoadTopArtists(selectedArtistTimeRange);
 			await LoadTopTracks();
 			await LoadRecentlyPlayed();
+			await LoadUserPlaylists();
 		}
 		catch (Exception ex)
 		{
@@ -941,6 +1102,48 @@
 		finally
 		{
 			isLoading = false;
+			StateHasChanged();
+		}
+	}
+
+		private async Task LoadUserPlaylists()
+	{
+		loadingPlaylists = true;
+		StateHasChanged();
+
+		try
+		{
+			// Fetch all playlists first so we can debug
+			allPlaylists = await AuthService.GetUserPlaylistsAsync(50);
+        
+			// Log information about playlists to help diagnose
+			await JSRuntime.InvokeVoidAsync("console.log", "All playlists count:", allPlaylists.Count);
+        
+			// Filter for only playlists that the user owns
+			var ownedPlaylists = allPlaylists.Where(p => p.IsOwner).ToList();
+			await JSRuntime.InvokeVoidAsync("console.log", "Owned playlists count:", ownedPlaylists.Count);
+        
+			// Sort by saves count in descending order and take top 3
+			topPlaylists = ownedPlaylists
+				.OrderByDescending(p => p.SavesCount)
+				.Take(3)
+				.ToList();
+            
+			// Log the selected playlists for verification
+			foreach (var playlist in topPlaylists)
+			{
+				await JSRuntime.InvokeVoidAsync("console.log", 
+					$"Selected playlist: {playlist.Name}, Owned: {playlist.IsOwner}, Saves: {playlist.SavesCount}");
+			}
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error loading playlists: {ex.Message}");
+			topPlaylists = new List<SpotifyPlaylistDTO>();
+		}
+		finally
+		{
+			loadingPlaylists = false;
 			StateHasChanged();
 		}
 	}

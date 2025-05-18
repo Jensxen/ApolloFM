@@ -14,6 +14,7 @@ namespace FM.Application.Services.ServiceDTO.SpotifyDTO
         public string Album { get; set; }
         public string AlbumImageUrl { get; set; }
         public string SongUrl { get; set; }
+        public int Rank { get; set; }
 
         [JsonIgnore]
         public TimeSpan Progress { get; set; }
