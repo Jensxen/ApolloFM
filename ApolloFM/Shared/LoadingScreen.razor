@@ -1,0 +1,37 @@
+﻿@namespace ApolloFM.Shared
+@inject IJSRuntime JSRuntime
+
+<div class="apollo-loading-screen">
+    <div class="loading-container">
+        <div class="equalizer-container">
+            <div class="equalizer-bar bar1"></div>
+            <div class="equalizer-bar bar2"></div>
+            <div class="equalizer-bar bar3"></div>
+            <div class="equalizer-bar bar4"></div>
+            <div class="equalizer-bar bar5"></div>
+            <div class="equalizer-bar bar6"></div>
+            <div class="equalizer-bar bar7"></div>
+            <div class="equalizer-bar bar8"></div>
+            <div class="equalizer-bar bar9"></div>
+            <div class="equalizer-bar bar10"></div>
+        </div>
+        <div class="music-note note1">♪</div>
+        <div class="music-note note2">♫</div>
+        <div class="music-note note3">♩</div>
+        <div class="music-note note4">♬</div>
+        <div class="loading-text">@LoadingText</div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string LoadingText { get; set; } = "Loading your music...";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "void(0)");
+        }
+    }
+}
