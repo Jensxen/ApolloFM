@@ -824,7 +824,6 @@
                 forumTopics.Insert(0, createdTopic);
                 CloseCreateTopicModal();
 
-                await JSRuntime.InvokeVoidAsync("alert", "Topic created successfully!");
                 await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Topic created with ID: {createdTopic.Id}");
             }
         }

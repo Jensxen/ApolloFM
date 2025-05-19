@@ -1,0 +1,104 @@
+﻿@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <img src="images/ApolloFM.png" alt="ApolloFM Logo" />
+    </div>
+
+    <div class="sidebar-menu">
+        <NavLink class="sidebar-item" href="dashboard" Match="NavLinkMatch.All">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </NavLink>
+
+        <NavLink class="sidebar-item" href="forum">
+            <i class="fas fa-comments"></i>
+            <span>Forum</span>
+        </NavLink>
+
+        <NavLink class="sidebar-item" href="discover">
+            <i class="fas fa-compass"></i>
+            <span>Discover</span>
+        </NavLink>
+
+        <NavLink class="sidebar-item" href="playlists">
+            <i class="fas fa-list"></i>
+            <span>Playlists</span>
+        </NavLink>
+
+        <NavLink class="sidebar-item" href="profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </NavLink>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="user-profile">
+            <img src="@userProfilePictureUrl" alt="User Profile" />
+            <span>@userName</span>
+        </div>
+        <button class="logout-btn" @onclick="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+    </div>
+</div>
+
+@code {
+    private string userProfilePictureUrl = "images/default-profile.jpg";
+    private string userName = "Spotify User";
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+        // StartPollingForUserInfo(); // Uncomment if you implement polling
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            var userProfile = await AuthService.GetUserProfile();
+            if (userProfile != null)
+            {
+                userName = userProfile.DisplayName ?? "Spotify User";
+                if (userProfile.Images != null && userProfile.Images.Any() && !string.IsNullOrEmpty(userProfile.Images.First().Url))
+                {
+                    userProfilePictureUrl = userProfile.Images.First().Url;
+                }
+                else if (!string.IsNullOrEmpty(userProfile.ProfilePictureUrl))
+                {
+                    userProfilePictureUrl = userProfile.ProfilePictureUrl;
+                }
+                // else, keep default profile picture
+                StateHasChanged(); // Ensure UI updates if data fetched after initial render
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error or handle as needed
+            Console.WriteLine($"Error loading user profile in sidebar: {ex.Message}");
+            // Potentially set to defaults or show an error state in the sidebar
+            userProfilePictureUrl = "images/default-profile.jpg";
+            userName = "Error";
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        try
+        {
+            await AuthService.LogoutAsync(); // Assuming LogoutAsync is the correct method
+            NavigationManager.NavigateTo("/", forceLoad: true); // Force load to ensure state is cleared
+        }
+        catch (Exception ex)
+        {
+            // Use JSRuntime to log to browser console if available and appropriate
+            // Or use a logging service
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error logging out: {ex.Message}");
+        }
+    }
+}

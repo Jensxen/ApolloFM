@@ -62,14 +62,8 @@ namespace FM.Application.Services.ForumServices
             if (string.IsNullOrEmpty(userId))
                 throw new UnauthorizedAccessException("User must be authenticated to create a topic");
 
-            // Get the first user in the database - this ensures we use a valid user ID
-            // This is a temporary solution until proper authentication is implemented
-            var firstUser = await _userRepository.GetFirstUserAsync();
-            if (firstUser == null)
-                throw new InvalidOperationException("No users exist in the database");
-
-            // Use the ID of the first user in the database
-            return await _forumRepository.CreateTopicAsync(createTopicDto, firstUser.Id);
+            // Use the provided userId parameter directly
+            return await _forumRepository.CreateTopicAsync(createTopicDto, userId);
         }
 
         public async Task<CommentDto> AddCommentAsync(AddCommentDto addCommentDto, string userId)
