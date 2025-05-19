@@ -127,16 +127,16 @@ namespace FM.Application.Services.AuthServices
             {
                 var apiUrl = "https://localhost:7043"; // Your API URL
 
-                // Generate a random state value for security
+                // Generate random state value
                 var state = Guid.NewGuid().ToString();
 
                 // Store it in localStorage for validation later
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "spotify_auth_state", state);
 
-                // This should be the Blazor app's spotify-callback component URL
+                // Spotify-callback component URL
                 var redirectUri = $"{_navigationManager.BaseUri}spotify-callback";
 
-                // Use the client app's callback component and pass state
+                // Pass state
                 var loginUrl = $"{apiUrl}/api/auth/login?returnUrl={Uri.EscapeDataString(redirectUri)}&clientState={Uri.EscapeDataString(state)}";
 
                 Console.WriteLine($"Redirecting to login URL: {loginUrl}");
@@ -160,13 +160,13 @@ namespace FM.Application.Services.AuthServices
                     return;
                 }
 
-                // Log the code we're using
+                
                 Console.WriteLine($"Handling callback with code: {code.Substring(0, Math.Min(10, code.Length))}...");
 
-                // Create client for API requests
+                // API requests
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                // Send code in JSON body using POST
+                // POST request to handle the state error
                 var responseMessage = await client.PostAsJsonAsync("api/auth/handle-state-error", new { code });
 
                 // Log the status
@@ -217,7 +217,7 @@ namespace FM.Application.Services.AuthServices
         {
             try
             {
-                // Get a valid access token (with automatic refresh if needed)
+                // Get a valid access token
                 var token = await GetValidAccessTokenAsync();
 
                 await _jsRuntime.InvokeVoidAsync("console.log",
@@ -233,13 +233,13 @@ namespace FM.Application.Services.AuthServices
                 // Add the authorization header
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-                // Log the headers for debugging
+               
                 await _jsRuntime.InvokeVoidAsync("console.log",
                     "Authorization header set: " + client.DefaultRequestHeaders.Authorization?.ToString());
 
                 var response = await client.GetAsync(endpoint);
 
-                // Log response status
+              
                 await _jsRuntime.InvokeVoidAsync("console.log",
                     $"API response: {(int)response.StatusCode} {response.StatusCode}");
 
@@ -288,7 +288,7 @@ namespace FM.Application.Services.AuthServices
                         // Create client for API requests
                         var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                        // Call your API to refresh the token
+                        // Call API to refresh the token
                         var response = await client.PostAsync(
                             $"api/auth/refresh?refreshToken={Uri.EscapeDataString(refreshToken)}",
                             null);

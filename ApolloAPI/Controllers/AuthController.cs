@@ -301,7 +301,7 @@ public class AuthController : ControllerBase
         var clientId = _configuration["Spotify:ClientId"];
         var redirectUri = _configuration["Spotify:RedirectUri"];
 
-        // Allow the client to provide the state (from localStorage)
+        
         string state;
         if (string.IsNullOrEmpty(clientState))
         {
@@ -310,12 +310,12 @@ public class AuthController : ControllerBase
         }
         else
         {
-            // Use client-provided state
+            // Use client state
             state = clientState;
             _logger.LogInformation("Using client-provided state: {State}", state);
         }
 
-        // Store in session for server-side validation if needed
+        // Store in session for server-side validation
         HttpContext.Session.SetString("OAuthState", state);
 
         _logger.LogInformation("Generated OAuth state: {State}", state);
@@ -417,7 +417,7 @@ public class AuthController : ControllerBase
         {
             _logger.LogWarning("State mismatch: expected {ExpectedState}, received {ReceivedState}", storedState, state);
 
-            GenerateAndStoreState(); // Generate a new state for the next request
+            GenerateAndStoreState(); // Generate a new state
             return Redirect($"/api/auth/login");
         }
 

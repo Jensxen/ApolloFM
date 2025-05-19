@@ -5,10 +5,10 @@ window.AuthenticationService = {
     init: function () {
         console.log("AuthenticationService.init() called.");
         
-        // Check if we're on a callback URL
+        // Check for callback URL
         this.handleCallbackIfPresent();
         
-        // Check if we have a valid token
+        // Check for valid token
         if (this.isTokenValid()) {
             console.log("Found valid token on initialization");
             return true;
