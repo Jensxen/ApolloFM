@@ -41,7 +41,6 @@ namespace FM.Application.Services.AuthServices
         {
             try
             {
-                // Use GetApiDataAsync instead of direct client.GetAsync to ensure proper auth headers
                 var userProfile = await GetApiDataAsync<SpotifyUserProfile>("api/auth/user");
                 return userProfile;
             }
@@ -100,7 +99,6 @@ namespace FM.Application.Services.AuthServices
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
-                // No content means no track is playing
                 return null;
             }
             catch (Exception ex)
@@ -112,8 +110,7 @@ namespace FM.Application.Services.AuthServices
 
         public async Task LogoutAsync()
         {
-            // Use the correct method name from your TokenService class
-            _tokenService.ClearAccessTokens(); // or ClearTokens() depending on your implementation
+            _tokenService.ClearAccessTokens(); 
 
             var authProvider = (SpotifyAuthenticationStateProvider)_authStateProvider;
             await authProvider.MarkUserAsLoggedOut();
@@ -163,13 +160,10 @@ namespace FM.Application.Services.AuthServices
                 
                 Console.WriteLine($"Handling callback with code: {code.Substring(0, Math.Min(10, code.Length))}...");
 
-                // API requests
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                // POST request to handle the state error
                 var responseMessage = await client.PostAsJsonAsync("api/auth/handle-state-error", new { code });
 
-                // Log the status
                 Console.WriteLine($"POST /api/auth/handle-state-error status: {(int)responseMessage.StatusCode} {responseMessage.StatusCode}");
 
                 if (responseMessage.IsSuccessStatusCode)
@@ -251,12 +245,12 @@ namespace FM.Application.Services.AuthServices
             }
         }
 
-        public async Task<List<SpotifyPlaylistDTO>> GetUserPlaylistsAsync(int limit = 50, bool onlyOwned = false, int topCount = 0)
+        public async Task<List<SpotifyPlaylistDTO>> GetUserPlaylistsAsync(int limit = 10, bool onlyOwned = false, int topCount = 0)
         {
             try
             {
-                // Use the existing GetApiDataAsync method which handles authentication and HTTP calls
-                return await GetApiDataAsync<List<SpotifyPlaylistDTO>>($"api/auth/playlists?limit={limit}&onlyOwned{onlyOwned}&topCount={topCount}");
+                return await GetApiDataAsync<List<SpotifyPlaylistDTO>>
+                    ($"api/auth/playlists?limit={limit}&onlyOwned={onlyOwned}&topCount={topCount}");
             }
             catch (Exception ex)
             {

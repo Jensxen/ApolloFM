@@ -54,7 +54,6 @@
                 return;
             }
 
-            // Check if we have a code parameter (required)
             if (string.IsNullOrEmpty(Code))
             {
                 errorMessage = "Authorization code is missing. Please try logging in again.";
@@ -64,19 +63,16 @@
             Console.WriteLine($"Callback received with code: {Code.Substring(0, Math.Min(10, Code.Length))}...");
             Console.WriteLine($"Callback received with state: {State}");
 
-            // Validate state parameter if provided
+
             var storedState = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "spotify_auth_state");
 
             if (!string.IsNullOrEmpty(State) && !string.IsNullOrEmpty(storedState) && State != storedState)
             {
                 Console.WriteLine($"State mismatch - stored: {storedState} url: {State}");
-                // Log warning but continue
             }
 
-            // Process the authorization code directly here
             try
             {
-                // Use the code directly with the auth service
                 await ProcessAuthCode(Code);
             }
             catch (Exception ex)
@@ -89,20 +85,16 @@
         {
             Console.Error.WriteLine($"Error in callback: {ex.Message}");
             errorMessage = "Authentication error occurred";
-            // Don't try to serialize the exception for logging
         }
     }
 
     private async Task ProcessAuthCode(string code)
     {
-        // Method 1: Store the access token directly without making API call
         TokenService.SetAccessToken("temporary_token", 3600);
 
-        // Update auth state
         var authProvider = (SpotifyAuthenticationStateProvider)AuthStateProvider;
         await authProvider.MarkUserAsAuthenticated("temporary_token");
 
-        // Navigate to dashboard - this will trigger a token refresh through the normal flow
         Navigation.NavigateTo("/dashboard");
     }
 

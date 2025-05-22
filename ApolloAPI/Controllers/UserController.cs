@@ -125,7 +125,7 @@ namespace ApolloAPI.Controllers
                 if (user == null)
                     return NotFound($"User with ID {userId} not found");
 
-                // Generate a new numeric ID - using timestamp (unique enough for your use case)
+                // Generate a new numeric ID
                 var newNumericId = DateTime.UtcNow.Ticks.ToString().Substring(10);
 
                 // Create a new user with the same data but new ID
@@ -144,7 +144,7 @@ namespace ApolloAPI.Controllers
                     // Add new user
                     await _userRepository.AddUserAsync(updatedUser);
 
-                    // Delete old user - might need an additional method in your repository
+                    // Delete old user
                     await _userRepository.DeleteUserAsync(userId, user.RowVersion);
 
                     await _unitOfWork.CommitAsync();

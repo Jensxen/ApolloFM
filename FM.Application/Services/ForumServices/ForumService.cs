@@ -1,8 +1,4 @@
-﻿// FM.Application/Services/ForumServices/ForumService.cs
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using FM.Application.Interfaces.IRepositories;
+﻿using FM.Application.Interfaces.IRepositories;
 using FM.Application.Services.ServiceDTO;
 using FM.Application.Services.UserServices;
 

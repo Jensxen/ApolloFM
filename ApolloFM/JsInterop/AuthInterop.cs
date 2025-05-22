@@ -1,5 +1,4 @@
-﻿// Add this to a new file: ApolloFM/JsInterop/AuthInterop.cs
-using Microsoft.JSInterop;
+﻿using Microsoft.JSInterop;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components;

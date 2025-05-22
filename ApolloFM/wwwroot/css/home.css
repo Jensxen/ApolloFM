@@ -1,5 +1,4 @@
-﻿/* Reset body and html to ensure full height */
-html, body {
+﻿html, body {
     margin: 0;
     padding: 0;
     height: 100%;
@@ -7,7 +6,6 @@ html, body {
     overflow-x: hidden;
 }
 
-/* Style for the app div (Blazor's root element) */
 #app {
     height: 100%;
     width: 100%;
@@ -15,7 +13,6 @@ html, body {
     flex-direction: column;
 }
 
-/* Homepage container that fills the entire screen */
 .homepage-container {
     display: flex;
     flex-direction: column;
@@ -33,7 +30,6 @@ html, body {
     padding: 0;
 }
 
-/* Header section containing the logo */
 .header {
     width: 100%;
     padding: 10px 20px;
@@ -43,13 +39,11 @@ html, body {
     z-index: 10;
 }
 
-/* Logo in the top left corner */
 .logo {
     text-align: left;
     margin-top: -5px;
 }
 
-/* Content container for centered elements */
 .content-container {
     display: flex;
     flex-direction: column;
@@ -62,7 +56,6 @@ html, body {
     z-index: 1;
 }
 
-/* Title styling */
 .title {
     font-size: 2.5rem;
     font-weight: bold;
@@ -70,19 +63,16 @@ html, body {
     margin-bottom: 10px;
 }
 
-/* Intro text styling */
 .intro-text {
     font-size: 1.2rem;
     margin-bottom: 30px;
     color: #cccccc;
 }
 
-/* Spinner container */
 .spinner-container {
     margin: 20px 0;
 }
 
-/* Button styles */
 .btn-spotify {
     background-color: #1DB954;
     border: none;
@@ -103,7 +93,6 @@ html, body {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
-/* Error message styles */
 .error-message {
     margin-top: 20px;
     color: #ff4d4d;
@@ -111,7 +100,6 @@ html, body {
     z-index: 1;
 }
 
-/* Authenticated user welcome text */
 .welcome-text {
     font-size: 1.2rem;
     margin-bottom: 20px;
@@ -123,7 +111,6 @@ html, body {
     font-weight: 600;
 }
 
-/* Logout button */
 .logout-btn {
     background-color: transparent;
     border: 2px solid white;

@@ -22,7 +22,7 @@ namespace FM.Infrastructure.Repositories.WebAssembly
             }
             catch
             {
-                // Return a default user for client-side operations
+                // Returns a default user for client-side operations
                 return new User("default_user", "Default User", "default_spotify_id", 1);
             }
         }
@@ -67,7 +67,6 @@ namespace FM.Infrastructure.Repositories.WebAssembly
             }
         }
 
-        // These methods don't need real implementations in the WebAssembly client
         public Task AddUserAsync(User user) => Task.CompletedTask;
         public Task UpdateUserAsync(User user) => Task.CompletedTask;
         public Task DeleteUserAsync(string id, byte[] rowVersion) => Task.CompletedTask;

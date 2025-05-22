@@ -1,5 +1,4 @@
-﻿// Add this to the same file as AuthInterop.cs or create a new file
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components;
 
 namespace ApolloFM.JsInterop
@@ -13,7 +12,7 @@ namespace ApolloFM.JsInterop
 
         public void Dispose()
         {
-            // Cleanup if needed
+            
         }
     }
 }

@@ -206,7 +206,7 @@ public class AuthController : ControllerBase
             _logger.LogError("Unauthorized: {Message}", ex.Message);
 
             // Clear tokens and force reauthorization
-            _tokenService.ClearAccessTokens(); // Make sure this method name exists in TokenService
+            _tokenService.ClearAccessTokens();
             return Unauthorized("The access token is invalid or expired");
         }
         catch (Exception ex)
@@ -356,7 +356,7 @@ public class AuthController : ControllerBase
                 if (existingUser != null)
                 {
                     await _unitOfWork.CommitAsync();
-                    return Ok(existingUser); // User already registered
+                    return Ok(existingUser);
                 }
 
                 // Create new user
@@ -364,7 +364,7 @@ public class AuthController : ControllerBase
                     request.SpotifyUserId,
                     request.DisplayName,
                     request.SpotifyUserId,
-                    1 // Default user role ID
+                    1 
                 );
 
                 await _userRepository.AddUserAsync(newUser);
@@ -514,8 +514,6 @@ public class AuthController : ControllerBase
                         needsUpdate = true;
                     }
 
-                    // Add other fields to update if needed
-
                     if (needsUpdate)
                     {
                         await _userRepository.UpdateUserAsync(existingUser);
@@ -527,7 +525,7 @@ public class AuthController : ControllerBase
                 }
 
                 // Create new user
-                var defaultRole = 1; // Assuming 1 is the "User" role ID
+                var defaultRole = 1;
 
                 var newUser = new User(
                     spotifyUser.Id,
@@ -546,7 +544,7 @@ public class AuthController : ControllerBase
             }
             catch (Exception ex)
             {
-                // If anything goes wrong, rollback the transaction
+                // rollback the transaction
                 await _unitOfWork.RollbackAsync();
                 _logger.LogError(ex, "Error during user registration, transaction rolled back");
                 throw;

@@ -611,11 +611,9 @@
 </style>
 
 @code {
-    // Data
     private List<ForumTopicDto> forumTopics = new List<ForumTopicDto>();
     private List<SubForumDto> subForums = new List<SubForumDto>();
 
-    // UI state
     private bool isLoading = true;
     private bool hasError = false;
     private string errorMessage = "";
@@ -625,17 +623,14 @@
     private string currentUserId;
     private string userDisplayName;
 
-    // Form state
     private CreateTopicDto newTopic = new CreateTopicDto();
     private string titleError;
     private string contentError;
 
-    // Computed properties
     private List<ForumTopicDto> filteredTopics => selectedSubForumId == 0
         ? forumTopics
         : forumTopics.Where(t => t.SubForumId == selectedSubForumId).ToList();
 
-    // Icon options
     private List<string> availableIcons = new List<string>
     {
         "fas fa-comments",
@@ -662,10 +657,8 @@
             isLoading = true;
             hasError = false;
 
-            // Log that we're loading data
             await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading data...");
 
-            // Try to get user info
             var userProfile = await AuthService.GetUserProfile();
             if (userProfile != null)
             {
@@ -678,17 +671,14 @@
                 await JSRuntime.InvokeVoidAsync("console.log", "Forum: No user profile available");
             }
 
-            // Load subforums
             await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading subforums...");
             subForums = await ForumService.GetSubForumsAsync();
             await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {subForums.Count} subforums");
 
-            // Load topics
             await JSRuntime.InvokeVoidAsync("console.log", "Forum: Loading topics...");
             forumTopics = await ForumService.GetTopicsAsync();
             await JSRuntime.InvokeVoidAsync("console.log", $"Forum: Loaded {forumTopics.Count} topics");
 
-            // Initialize new topic with default values
             if (subForums.Any() && newTopic.SubForumId == 0)
             {
                 newTopic.SubForumId = subForums.First().Id;
@@ -699,11 +689,9 @@
         {
             await JSRuntime.InvokeVoidAsync("console.error", "Error loading forum data:", ex);
 
-            // Set error state
             hasError = true;
             errorMessage = $"Failed to load forum data: {ex.Message}";
 
-            // Initialize empty collections to avoid null reference errors
             subForums = new List<SubForumDto>();
             forumTopics = new List<ForumTopicDto>();
         }
@@ -726,7 +714,6 @@
 
     private void ShowCreateTopicModal()
     {
-        // Reset form
         newTopic = new CreateTopicDto
             {
                 SubForumId = subForums.Any() ? subForums.First().Id : 0,
@@ -749,7 +736,6 @@
 
     private async Task CreateTopic()
     {
-        // Validate form
         bool isValid = true;
 
         if (string.IsNullOrWhiteSpace(newTopic.Title))
@@ -784,17 +770,14 @@
 
         if (!isValid) return;
 
-        // Submit form
         isSubmitting = true;
 
         try
         {
             await JSRuntime.InvokeVoidAsync("console.log", "Forum: Creating new topic...");
 
-            // First check if we already have userId from initial load
             if (string.IsNullOrEmpty(currentUserId))
             {
-                // Attempt to get user profile again
                 var userProfile = await AuthService.GetUserProfile();
                 if (userProfile == null || string.IsNullOrEmpty(userProfile.Id))
                 {
@@ -804,7 +787,6 @@
                 await JSRuntime.InvokeVoidAsync("console.log", $"Retrieved user ID: {currentUserId}");
             }
 
-            // Debug logging
             await JSRuntime.InvokeVoidAsync("console.log", "Creating topic...");
 
             var createdTopic = await ForumService.CreateTopicAsync(newTopic);
@@ -840,7 +822,6 @@
                 }
                 catch
                 {
-                    // Behold originale besked
                 }
             }
 

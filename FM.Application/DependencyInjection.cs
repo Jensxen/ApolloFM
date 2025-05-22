@@ -22,13 +22,13 @@ namespace FM.Application
         bool isApiContext = false,
         bool registerAuthenticationProvider = true)
         {
-            // Register the command interfaces
+            // Command interfaces
             services.AddScoped<ISubForumCommand, SubForumCommand>();
             services.AddScoped<IUserCommand, UserCommand>();
             services.AddScoped<IPostCommand, PostCommand>();
             services.AddScoped<ICommentCommand, CommentCommand>();
 
-            // Register the query interfaces
+            // Query interfaces
             services.AddScoped<ISubForumQuery, SubForumQuery>();
             services.AddScoped<IPostQuery, PostQuery>();
             services.AddScoped<IUserQuery, UserQuery>();

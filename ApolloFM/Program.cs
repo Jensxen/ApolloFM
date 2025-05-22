@@ -25,13 +25,13 @@ builder.Services.AddHttpClient("SpotifyAPI", client =>
     client.BaseAddress = new Uri("https://api.spotify.com/v1/");
 });
 
-// Configure HttpClient for your own API
+// Configure HttpClient for own API
 builder.Services.AddHttpClient("ApolloAPI", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7043/"); // Your API URL
+    client.BaseAddress = new Uri("https://localhost:7043/"); 
 });
 
-// Add default HttpClient (pointing to the host)
+// Add default HttpClient
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 // Register custom AuthenticationStateProvider
@@ -47,7 +47,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 
 builder.Services.AddScoped<TokenService>();
 
-// Add a WebAssembly-specific implementation of IUserRepository
+// WebAssembly-specific implementation of IUserRepository
 builder.Services.AddScoped<IUserRepository, WebUserRepository>();
 
 builder.Services.AddApplicationServices(isApiContext: false, registerAuthenticationProvider: false);
@@ -70,7 +70,7 @@ builder.Services.AddScoped<AuthService>(provider =>
         jsRuntime);
 });
 
-// Add this line to set up the JS interop
+// JSInterop service for authentication
 builder.Services.AddScoped(sp => new AuthInteropService(
     sp.GetRequiredService<AuthenticationStateProvider>(),
     sp.GetRequiredService<NavigationManager>()

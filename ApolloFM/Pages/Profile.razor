@@ -1099,10 +1099,10 @@
 
 		try
 		{
-			// Fetch all playlists first so we can debug
+			// Fetch all playlists first
 			allPlaylists = await AuthService.GetUserPlaylistsAsync(50);
         
-			// Log information about playlists to help diagnose
+			// Log information about playlists
 			await JSRuntime.InvokeVoidAsync("console.log", "All playlists count:", allPlaylists.Count);
         
 			// Filter for only playlists that the user owns

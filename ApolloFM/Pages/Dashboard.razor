@@ -678,19 +678,18 @@
 </style>
 
 @code {
-	private string userProfilePictureUrl = "images/default-profile.jpg"; // Default profile picture
+	private string userProfilePictureUrl = "images/default-profile.jpg"; 
 	private string userName = "Spotify User";
 	private bool isLoading = true;
 	private bool hasError = false;
 	private string errorMessage = "";
 	private List<SpotifyDataDTO> topTracks;
 
-	// For top tracks filtering
+	// top tracks filtering
 	private string selectedTimeRange = "medium_term";
 	private bool loadingTopTracks = false;
 	private string GetPlayCountText(int index)
 	{
-		// Create indicative text based on position in top tracks
 		if (index == 0) return "Most played";
 		if (index < 3) return "Frequently played";
 		if (index < 7) return "Often played";
@@ -700,24 +699,21 @@
 
 	private int GetPopularityIndicator(int index)
 	{
-		// Return a value between 30-100% for visual indicator
-		// First track has 100%, last track has 30%
 		int count = topTracks.Count;
 		if (count <= 1) return 100;
 
-		// Calculate decreasing percentage
 		return 100 - ((index * 70) / (count - 1));
 	}
 
 	// Now Playing Track
 	private SpotifyDataDTO? nowPlayingTrack;
-	private string? currentSongId; // Track the current song ID to detect changes
+	private string? currentSongId;
 
 	// Timer for polling
 	private System.Threading.Timer? _pollingTimer;
-	private readonly int _pollingIntervalMs = 3000; // Poll every 3 seconds
+	private readonly int _pollingIntervalMs = 3000;
 
-	// Playback progress
+	// Playback progress (unused)
 	private double PlaybackProgress => nowPlayingTrack != null && nowPlayingTrack.Duration.TotalSeconds > 0
 		? (nowPlayingTrack.Progress.TotalSeconds / nowPlayingTrack.Duration.TotalSeconds) * 100
 		: 0;
@@ -793,12 +789,10 @@
 					url = url.Substring(0, queryIndex);
 				}
 
-				// Split by slashes and get the last part (ID)
 				string[] parts = url.Split('/');
 				string id = parts[parts.Length - 1];
 
-				// Determine the type (track, album, artist, etc.)
-				string type = "track"; // Default
+				string type = "track";
 				if (url.Contains("/album/"))
 					type = "album";
 				else if (url.Contains("/artist/"))
@@ -806,31 +800,26 @@
 				else if (url.Contains("/playlist/"))
 					type = "playlist";
 
-				// Return the Spotify URI
 				return $"spotify:{type}:{id}";
 			}
 
-			// If it doesn't match the expected format, return the original URL
 			return url;
 		}
 		catch
 		{
-			// If anything goes wrong, return the original URL
 			return url;
 		}
 	}
 
 	private void StartPollingForNowPlaying()
 	{
-		// Stop existing timer if any
 		_pollingTimer?.Dispose();
 
-		// Create a new timer that calls UpdateNowPlaying every _pollingIntervalMs
 		_pollingTimer = new System.Threading.Timer(
 			async _ => await UpdateNowPlaying(),
 			null,
-			_pollingIntervalMs, // Initial delay
-			_pollingIntervalMs  // Interval
+			_pollingIntervalMs, 
+			_pollingIntervalMs 
 		);
 	}
 
@@ -840,24 +829,20 @@
 		{
 			var updatedTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
 
-			// Check if the track has changed (different ID or play state changed)
 			bool trackChanged = (updatedTrack?.SongUrl != currentSongId) ||
 								(nowPlayingTrack?.isPlaying != updatedTrack?.isPlaying);
 
 			if (trackChanged)
 			{
-				// Update our reference to the current track
 				nowPlayingTrack = updatedTrack;
 				currentSongId = updatedTrack?.SongUrl;
 
-				// Force UI update on the UI thread
 				await InvokeAsync(StateHasChanged);
 			}
 		}
 		catch (Exception ex)
 		{
 			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating now playing track: {ex.Message}");
-			// Don't update the UI on error - keep showing the last known track
 		}
 	}
 
@@ -888,7 +873,7 @@
 		try
 		{
 			nowPlayingTrack = await AuthService.GetCurrentlyPlayingTrackAsync();
-			currentSongId = nowPlayingTrack?.SongUrl; // Store current song ID
+			currentSongId = nowPlayingTrack?.SongUrl; 
 		}
 		catch (Exception ex)
 		{
@@ -930,7 +915,6 @@
 
 	public void Dispose()
 	{
-		// Clean up the timer when component is disposed
 		_pollingTimer?.Dispose();
 		_pollingTimer = null;
 	}

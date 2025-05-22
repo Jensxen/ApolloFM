@@ -24,7 +24,7 @@ namespace FM.Infrastructure
             }
             else
             {
-                // Server-side registrations
+                // Server-side
                 
                 // DbContext
                 services.AddDbContext<ApolloContext>(options =>

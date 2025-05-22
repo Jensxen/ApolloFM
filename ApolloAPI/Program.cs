@@ -12,7 +12,6 @@ using FM.Application.Services.SpotifyServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -37,10 +36,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorApp",
         policy => policy
-            .WithOrigins("https://localhost:7210")  // Your Blazor WebAssembly URL
+            .WithOrigins("https://localhost:7210")
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials());  // This is important for credentials
+            .AllowCredentials()); 
 });
 
 builder.Services.PostConfigure<OAuthOptions>(SpotifyAuthenticationDefaults.AuthenticationScheme, options =>
