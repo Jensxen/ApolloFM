@@ -84,18 +84,16 @@ namespace ApolloAPI.Controllers
         {
             try
             {
-                // Validate request
                 if (string.IsNullOrEmpty(createTopicDto.Title) || string.IsNullOrEmpty(createTopicDto.Content))
                 {
                     return BadRequest("Title and content are required.");
                 }
 
-                // Get and verify user identity
                 var userId = await GetUserIdFromTokenServiceOrRequest();
                 if (string.IsNullOrEmpty(userId))
                 {
                     _logger.LogWarning("No user ID could be found. Creating topic as anonymous.");
-                    userId = "119830768"; // Use known working ID for anonymous posts
+                    userId = "119830768";
                 }
 
                 var topicDto = await _forumService.CreateTopicWithUserIdAsync(createTopicDto, userId);
@@ -113,18 +111,16 @@ namespace ApolloAPI.Controllers
         {
             try
             {
-                // Validate request
                 if (string.IsNullOrEmpty(addCommentDto.Content))
                 {
                     return BadRequest("Comment content is required.");
                 }
 
-                // Get and verify user identity
                 var userId = await GetUserIdFromTokenServiceOrRequest();
                 if (string.IsNullOrEmpty(userId))
                 {
                     _logger.LogWarning("No user ID could be found. Creating comment as anonymous.");
-                    userId = "119830768"; // Use known working ID for anonymous comments
+                    userId = "119830768"; 
                 }
 
                 var commentDto = await _forumService.AddCommentAsync(addCommentDto, userId);
@@ -138,7 +134,6 @@ namespace ApolloAPI.Controllers
         }
         private async Task<string> GetUserIdFromTokenServiceOrRequest()
         {
-            // Try TokenService first
             var token = _tokenService.GetAccessToken();
             if (!string.IsNullOrEmpty(token))
             {
@@ -147,13 +142,11 @@ namespace ApolloAPI.Controllers
                     var spotifyUser = await GetSpotifyUserProfile(token);
                     if (spotifyUser != null)
                     {
-                        // Find or create user by Spotify ID
                         var user = await _userRepository.GetBySpotifyIdAsync(spotifyUser.Id);
 
-                        // Update user if needed
+
                         if (user != null)
                         {
-                            // Update display name if changed
                             if (user.DisplayName != spotifyUser.DisplayName && !string.IsNullOrEmpty(spotifyUser.DisplayName))
                             {
                                 user.UpdateDisplayName(spotifyUser.DisplayName);
@@ -170,7 +163,6 @@ namespace ApolloAPI.Controllers
                 }
             }
 
-            // Try Authorization header if TokenService didn't work
             var authHeader = Request.Headers["Authorization"].FirstOrDefault();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
             {
@@ -194,7 +186,6 @@ namespace ApolloAPI.Controllers
                 }
             }
 
-            // If we get here, we couldn't identify the user
             return null;
         }
 

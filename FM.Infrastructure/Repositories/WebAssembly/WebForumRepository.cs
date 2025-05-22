@@ -36,8 +36,6 @@ namespace FM.Infrastructure.Repositories.WebAssembly
                 return new List<ForumTopicDto>();
             }
         }
-
-        // Alias for GetTopicsAsync to satisfy the interface
         public Task<List<ForumTopicDto>> GetAllTopicsAsync()
         {
             return GetTopicsAsync();
@@ -70,7 +68,6 @@ namespace FM.Infrastructure.Repositories.WebAssembly
             }
         }
 
-        // Alias for GetSubForumsAsync to satisfy the interface
         public Task<List<SubForumDto>> GetAllSubForumsAsync()
         {
             return GetSubForumsAsync();
@@ -86,10 +83,9 @@ namespace FM.Infrastructure.Repositories.WebAssembly
                     Content = createTopicDto.Content,
                     SubForumId = createTopicDto.SubForumId,
                     Icon = createTopicDto.Icon ?? "fas fa-comments",
-                    SpotifyPlaylistId = "none" // Add a default value for SpotifyPlaylistId
+                    SpotifyPlaylistId = "none" 
                 };
 
-                // Log what we're sending in safe manner to prevent null reference errors
                 Console.WriteLine($"Sending topic: Title={topicRequest.Title}, " +
                                   $"Content={topicRequest.Content?.Substring(0, Math.Min(20, topicRequest.Content?.Length ?? 0))}..., " +
                                   $"SubForumId={topicRequest.SubForumId}, " +
@@ -119,12 +115,10 @@ namespace FM.Infrastructure.Repositories.WebAssembly
         {
             try
             {
-                // Again, using the DTO directly without wrapping it
                 var commentRequest = new
                 {
                     Content = addCommentDto.Content,
                     PostId = addCommentDto.PostId
-                    // UserId is handled by the controller via claims
                 };
 
                 var response = await _httpClient.PostAsJsonAsync("api/forum/comments", commentRequest, _jsonOptions);

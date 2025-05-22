@@ -16,20 +16,20 @@ namespace FM.Infrastucture.Repositories
         public async Task<IEnumerable<Post>> GetAllPostsAsync()
         {
             return await _context.Set<Post>()
-                .Include(p => p.Comments) // Include comments
-                .ThenInclude(c => c.User) // Include related User entity for comments
-                .Include(p => p.User) // Include related User entity for posts
-                .Include(p => p.SubForum) // Include related SubForum entity
+                .Include(p => p.Comments) 
+                .ThenInclude(c => c.User) 
+                .Include(p => p.User) 
+                .Include(p => p.SubForum) 
                 .ToListAsync();
         }
 
         public async Task<Post> GetPostByIdAsync(int id)
         {
             return await _context.Set<Post>()
-                .Include(p => p.Comments) // Include comments
-                .ThenInclude(c => c.User) // Include related User entity for comments
-                .Include(p => p.User) // Include related User entity for posts
-                .Include(p => p.SubForum) // Include related SubForum entity
+                .Include(p => p.Comments) 
+                .ThenInclude(c => c.User) 
+                .Include(p => p.User) 
+                .Include(p => p.SubForum) 
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 

@@ -1,5 +1,4 @@
-﻿// FM.Infrastructure/DependencyInjection.cs
-using FM.Application.Services.ForumServices;
+﻿using FM.Application.Services.ForumServices;
 using FM.Application.Interfaces.IRepositories;
 using FM.Infrastructure.Repositories;
 using FM.Infrastructure.Repositories.ForumRepositories;
@@ -19,22 +18,19 @@ namespace FM.Infrastructure
         {
             if (isWebAssembly)
             {
-                // WebAssembly-specific registrations (no database context)
                 services.AddScoped<IForumRepository, WebForumRepository>();
-                // Add other WebAssembly-specific repositories as needed
                 
-                // Still register the service
                 services.AddScoped<IForumService, ForumService>();
             }
             else
             {
                 // Server-side registrations
                 
-                // Register the DbContext
+                // DbContext
                 services.AddDbContext<ApolloContext>(options =>
                     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-                // Register the repositories
+                // Repositories
                 services.AddScoped<ISubForumRepository, SubForumRepository>();
                 services.AddScoped<IUserRepository, UserRepository>();
                 services.AddScoped<IPostRepository, PostRepository>();
@@ -42,10 +38,8 @@ namespace FM.Infrastructure
                 services.AddScoped<ICommentRepository, CommentRepository>();
                 services.AddScoped<IForumRepository, ForumRepository>();
 
-                // Register the UnitOfWork (only needed on server-side)
                 services.AddScoped<IUnitOfWork, UnitOfWork>();
                 
-                // Register forum services
                 services.AddScoped<IForumService, ForumService>();
             }
             

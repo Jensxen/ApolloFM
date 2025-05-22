@@ -18,8 +18,8 @@ namespace FM.Infrastructure.Repositories
         public async Task<Comment> GetCommentByIdAsync(int id)
         {
             return await _dbContext.Set<Comment>()
-                .Include(c => c.User) // Include related User entity
-                .Include(c => c.Post) // Include related Post entity
+                .Include(c => c.User)
+                .Include(c => c.Post)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
@@ -48,16 +48,16 @@ namespace FM.Infrastructure.Repositories
         public async Task<IEnumerable<Comment>> GetAllCommentsAsync()
         {
             return await _dbContext.Set<Comment>()
-                .Include(c => c.User) // Include related User entity
-                .Include(c => c.Post) // Include related Post entity
+                .Include(c => c.User) 
+                .Include(c => c.Post) 
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Comment>> GetCommentsByPostIdAsync(int postId)
         {
             return await _dbContext.Set<Comment>()
-                .Where(c => c.PostId == postId) // Filter by PostId
-                .Include(c => c.User) // Include related User entity
+                .Where(c => c.PostId == postId) 
+                .Include(c => c.User) 
                 .ToListAsync();
         }
     }

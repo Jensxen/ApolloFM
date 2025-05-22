@@ -44,10 +44,8 @@ namespace FM.Application.Services.ForumServices
             if (string.IsNullOrEmpty(createTopicDto.Content))
                 throw new ArgumentException("Topic content cannot be empty");
 
-            // Get userId from authentication context
             var userId = await _userContext.GetCurrentUserIdAsync();
 
-            // This will now always return a valid ID since we're using a default
             return await _forumRepository.CreateTopicAsync(createTopicDto, userId);
         }
 
@@ -62,7 +60,6 @@ namespace FM.Application.Services.ForumServices
             if (string.IsNullOrEmpty(userId))
                 throw new UnauthorizedAccessException("User must be authenticated to create a topic");
 
-            // Use the provided userId parameter directly
             return await _forumRepository.CreateTopicAsync(createTopicDto, userId);
         }
 

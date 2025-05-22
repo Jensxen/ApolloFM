@@ -9,8 +9,8 @@ namespace FM.Domain.Entities
 {
     public class UserRole
     {
-        public int Id { get; protected set; } // Primary key
-        public string Name { get; protected set; } // Role name (fks, "Moderator", "Staff", "HeadAdmin")
+        public int Id { get; protected set; } 
+        public string Name { get; protected set; } 
         public ICollection<User> Users { get; protected set; } = new List<User>();
         public ICollection<Permission> Permissions { get; protected set; } = new List<Permission>();
 

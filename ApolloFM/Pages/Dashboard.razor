@@ -26,16 +26,6 @@
 			<span>Forum</span>
 		</NavLink>
 
-		<NavLink class="sidebar-item" href="discover">
-			<i class="fas fa-compass"></i>
-			<span>Discover</span>
-		</NavLink>
-
-		<NavLink class="sidebar-item" href="playlists">
-			<i class="fas fa-list"></i>
-			<span>Playlists</span>
-		</NavLink>
-
 		<NavLink class="sidebar-item" href="profile">
 			<i class="fas fa-user"></i>
 			<span>Profile</span>
@@ -738,19 +728,16 @@
 		{
 			isLoading = true;
 
-			// Get token from storage (automatically uses stored tokens)
 			var accessToken = await AuthService.GetValidAccessTokenAsync();
 
 			if (!string.IsNullOrEmpty(accessToken))
 			{
-				// Fetch user profile data
 				var userProfile = await AuthService.GetUserProfile();
 				if (userProfile != null)
 				{
 					Console.WriteLine($"User profile fetched: {userProfile.DisplayName}");
 					userName = userProfile.DisplayName ?? "Spotify User";
 
-					// Get the profile picture URL more robustly
 					if (userProfile.Images != null && userProfile.Images.Any() && !string.IsNullOrEmpty(userProfile.Images.First().Url))
 					{
 						userProfilePictureUrl = userProfile.Images.First().Url;
@@ -767,16 +754,13 @@
 					}
 				}
 
-				// Load dashboard data
 				await LoadTopTracks(selectedTimeRange);
 				await LoadNowPlaying();
 
-				// Start the polling timer
 				StartPollingForNowPlaying();
 			}
 			else
 			{
-				// No valid token and couldn't refresh, show error
 				hasError = true;
 				errorMessage = "Your session has expired. Please login again.";
 			}
@@ -799,16 +783,10 @@
 		if (string.IsNullOrEmpty(url))
 			return "#";
 
-		// Example conversion:
-		// From: https://open.spotify.com/track/1234567890
-		// To:   spotify:track:1234567890
-
 		try
 		{
-			// Parse the URL to extract track ID
 			if (url.Contains("open.spotify.com"))
 			{
-				// Remove any query parameters
 				int queryIndex = url.IndexOf('?');
 				if (queryIndex > 0)
 				{

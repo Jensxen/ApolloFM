@@ -9,9 +9,9 @@ namespace FM.Domain.Entities
 {
     public class User
     {
-        public string Id { get; protected set; } // Primary key
+        public string Id { get; protected set; }
         public string DisplayName { get; protected set; }
-        public string SpotifyUserId { get; protected set; } // Spotify user ID
+        public string SpotifyUserId { get; protected set; } 
         public int UserRoleId { get; protected set; }
         public UserRole? Role { get; protected set; }
 
@@ -20,8 +20,6 @@ namespace FM.Domain.Entities
 
 
         protected User() { }
-
-        // Constructor to set initial values including Id
         public User(string id, string displayName, string spotifyUserId, int userRoleId)
         {
             Id = id;

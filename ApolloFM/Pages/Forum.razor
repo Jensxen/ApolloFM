@@ -24,16 +24,6 @@
             <span>Forum</span>
         </NavLink>
 
-        <NavLink class="sidebar-item" href="discover">
-            <i class="fas fa-compass"></i>
-            <span>Discover</span>
-        </NavLink>
-
-        <NavLink class="sidebar-item" href="playlists">
-            <i class="fas fa-list"></i>
-            <span>Playlists</span>
-        </NavLink>
-
         <NavLink class="sidebar-item" href="profile">
             <i class="fas fa-user"></i>
             <span>Profile</span>
@@ -850,7 +840,7 @@
                 }
                 catch
                 {
-                    // If parsing fails, keep original message
+                    // Behold originale besked
                 }
             }
 
@@ -868,7 +858,7 @@
     {
         if (string.IsNullOrEmpty(content)) return string.Empty;
 
-        // Create a summary (first 150 chars)
+        
         return content.Length > 150
             ? content.Substring(0, 147) + "..."
             : content;
@@ -896,7 +886,6 @@
 
     private bool IsActiveDiscussion(ForumTopicDto topic)
     {
-        // Topic is considered active if it's less than 3 days old or has recent comments
         return (DateTime.Now - topic.CreatedAt).TotalDays < 3 || topic.CommentCount > 0;
     }
 

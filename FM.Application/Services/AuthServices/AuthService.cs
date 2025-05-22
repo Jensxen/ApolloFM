@@ -125,12 +125,12 @@ namespace FM.Application.Services.AuthServices
         {
             try
             {
-                var apiUrl = "https://localhost:7043"; // Your API URL
+                var apiUrl = "https://localhost:7043";
 
-                // Generate random state value
+                // State value
                 var state = Guid.NewGuid().ToString();
 
-                // Store it in localStorage for validation later
+                // Store
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "spotify_auth_state", state);
 
                 // Spotify-callback component URL
@@ -217,7 +217,6 @@ namespace FM.Application.Services.AuthServices
         {
             try
             {
-                // Get a valid access token
                 var token = await GetValidAccessTokenAsync();
 
                 await _jsRuntime.InvokeVoidAsync("console.log",
@@ -230,9 +229,7 @@ namespace FM.Application.Services.AuthServices
 
                 var client = _httpClientFactory.CreateClient("ApolloAPI");
 
-                // Add the authorization header
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
                
                 await _jsRuntime.InvokeVoidAsync("console.log",
                     "Authorization header set: " + client.DefaultRequestHeaders.Authorization?.ToString());

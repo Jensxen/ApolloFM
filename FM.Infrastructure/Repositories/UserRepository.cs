@@ -43,12 +43,11 @@ namespace FM.Infrastructure.Repositories
 
         public async Task DeleteUserAsync(string id, byte[] rowVersion)
         {
-            // Option 1: If User has soft delete functionality
+            
             var user = await _context.Users.FindAsync(id);
             if (user == null)
                 return;
 
-            // Check if rowVersion matches
             if (!user.RowVersion.SequenceEqual(rowVersion))
                 throw new DbUpdateConcurrencyException("The user has been modified by someone else.");
 

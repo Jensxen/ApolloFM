@@ -33,12 +33,12 @@ namespace FM.Infrastructure.Database
                 .HasForeignKey(p => p.SubForumId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Configure Post-Comment relationship with Cascade Delete
+            // Configure Post-Comment relationship
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
-                .OnDelete(DeleteBehavior.Cascade); // Enable cascade delete 
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Configure UserRole-Permission relationship
             modelBuilder.Entity<UserRole>()
@@ -52,6 +52,7 @@ namespace FM.Infrastructure.Database
                 .IsRowVersion()
                 .ValueGeneratedOnAddOrUpdate();
 
+            // Roles (Unused)
             modelBuilder.Entity<Post>()
                 .Property(p => p.RowVersion)
                 .IsRowVersion()
@@ -77,12 +78,11 @@ namespace FM.Infrastructure.Database
                 .IsRowVersion()
                 .ValueGeneratedOnAddOrUpdate();
 
-            // Make sure Post is configured with all properties
             modelBuilder.Entity<Post>(entity => 
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Icon).HasDefaultValue(string.Empty);
-                entity.Property(e => e.PostTypeId).HasDefaultValue(1); // Default as Topic
+                entity.Property(e => e.PostTypeId).HasDefaultValue(1);
                 entity.HasOne(e => e.ParentPost)
                     .WithMany()
                     .HasForeignKey(e => e.ParentPostId)

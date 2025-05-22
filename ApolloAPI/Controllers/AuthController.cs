@@ -301,7 +301,7 @@ public class AuthController : ControllerBase
         var clientId = _configuration["Spotify:ClientId"];
         var redirectUri = _configuration["Spotify:RedirectUri"];
 
-        
+
         string state;
         if (string.IsNullOrEmpty(clientState))
         {
@@ -417,7 +417,7 @@ public class AuthController : ControllerBase
         {
             _logger.LogWarning("State mismatch: expected {ExpectedState}, received {ReceivedState}", storedState, state);
 
-            GenerateAndStoreState(); // Generate a new state
+            GenerateAndStoreState();
             return Redirect($"/api/auth/login");
         }
 
@@ -432,7 +432,6 @@ public class AuthController : ControllerBase
         var clientSecret = _configuration["Spotify:ClientSecret"];
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
 
-        // Exchange the authorization code for an access token
         var tokenResponse = await _spotifyService.ExchangeCodeForTokenAsync(code, clientId, clientSecret, redirectUri);
 
         if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
@@ -441,11 +440,13 @@ public class AuthController : ControllerBase
             return Redirect($"{_clientAppUrl}?error=token_exchange_failed");
         }
 
-        // Store the access token and refresh token
         _tokenService.SetAccessToken(tokenResponse.AccessToken, tokenResponse.ExpiresIn);
-        _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
+        if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+        {
+            _tokenService.SetRefreshToken(tokenResponse.RefreshToken);
+        }
+        _logger.LogInformation("Access and Refresh tokens stored server-side.");
 
-        // Get user profile from Spotify and register user
         try
         {
             var userProfile = await GetSpotifyUserProfile(tokenResponse.AccessToken);
@@ -457,13 +458,10 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering user after authentication");
-            // Continue with the flow even if registration fails
         }
 
-        // For client-side auth, append the token to the redirect URL as a fragment
         var redirectUrl = $"{_clientAppUrl}/spotify-callback?code={Uri.EscapeDataString(code)}";
 
-        // Include the original state if available
         if (!string.IsNullOrEmpty(state))
         {
             redirectUrl += $"&state={Uri.EscapeDataString(state)}";
@@ -473,7 +471,6 @@ public class AuthController : ControllerBase
         return Redirect(redirectUrl);
     }
 
-    // Helper method to get user profile from Spotify
     private async Task<SpotifyAPI.Web.PrivateUser> GetSpotifyUserProfile(string accessToken)
     {
         try
@@ -489,7 +486,6 @@ public class AuthController : ControllerBase
         }
     }
 
-    // Helper method to register or update user
     private async Task<User> RegisterOrUpdateUser(SpotifyAPI.Web.PrivateUser spotifyUser)
     {
         if (spotifyUser == null)
@@ -500,7 +496,6 @@ public class AuthController : ControllerBase
 
         try
         {
-            // Start a transaction
             await _unitOfWork.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
 
             try

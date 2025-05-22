@@ -7,18 +7,16 @@ public class Comment
     public string Content { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    // Foreign key and navigation property for User
     public string UserId { get; set; }
     public User User { get; set; }
 
-    // Foreign key and navigation property for Post
     public int PostId { get; set; }
     public Post Post { get; set; }
 
     [Timestamp]
     public byte[] RowVersion { get; set; }
 
-    public Comment() { } // Parameterless constructor for EF Core
+    public Comment() { } 
     public Comment(string content, string userId, int postId)
     {
         Content = content;
